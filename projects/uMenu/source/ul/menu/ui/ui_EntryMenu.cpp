@@ -14,6 +14,20 @@ namespace ul::menu::ui {
 
         u32 g_EntryHeightCount = 0;
 
+        // steamui: a theme can lock the number of rows ("fixed_row_count" in main_menu.entry_menu), 0 = not locked
+        u32 g_FixedEntryHeightCount = 0;
+
+        u32 LoadFixedEntryHeightCount() {
+            util::JSON entry_menu_json;
+            if(TryGetUiElement("main_menu", "entry_menu", entry_menu_json)) {
+                const s32 count = entry_menu_json.value("fixed_row_count", 0);
+                if(count > 0) {
+                    return static_cast<u32>(count);
+                }
+            }
+            return 0;
+        }
+
         void SetEntryHeightCount(const u32 count) {
             UL_ASSERT_TRUE(g_GlobalSettings.config.SetEntry(cfg::ConfigEntryId::MenuEntryHeightCount, static_cast<u64>(count)));
             g_GlobalSettings.SaveConfig();
@@ -227,7 +241,7 @@ namespace ul::menu::ui {
         return entry;
     }
 
-    EntryMenu::EntryMenu(const s32 x, const s32 y, const std::string &path, FocusedEntryInputPressedCallback cur_entry_input_cb, FocusedEntryChangedCallback cur_entry_changed_cb, FocusedEntryChangeStartedCallback cur_entry_change_started_cb) : x(x), y(y), cur_entry_idx(0), entry_idx_stack(), cur_entry_input_cb(cur_entry_input_cb), cur_entry_changed_cb(cur_entry_changed_cb), cur_entry_change_started_cb(cur_entry_change_started_cb), enabled(true), selected_entry_idx(-1), empty_entry_icon(nullptr), selected_entry_icon(nullptr), entry_h_margin(EntryVerticalMargin), entries_to_add(), entries_to_remove(), pending_load_img_entry_start_idx(UINT32_MAX), pending_load_img_entry_ext_idx(UINT32_MAX), pending_load_img_done(false), entry_page_count(0), entry_total_count(0), swipe_mode(SwipeMode::None), entries_base_swipe_neg_offset(0), entries_base_swipe_neg_offset_incr(), extra_entry_swipe_show_h_count(0) {
+    EntryMenu::EntryMenu(const s32 x, const s32 y, const std::string &path, FocusedEntryInputPressedCallback cur_entry_input_cb, FocusedEntryChangedCallback cur_entry_changed_cb, FocusedEntryChangeStartedCallback cur_entry_change_started_cb) : x(x), y(y), cur_entry_idx(0), entry_idx_stack(), cur_entry_input_cb(cur_entry_input_cb), cur_entry_changed_cb(cur_entry_changed_cb), cur_entry_change_started_cb(cur_entry_change_started_cb), enabled(true), selected_entry_idx(-1), empty_entry_icon(nullptr), selected_entry_icon(nullptr), entry_h_margin(EntryVerticalMargin), entries_to_add(), entries_to_remove(), pending_load_img_entry_start_idx(UINT32_MAX), pending_load_img_entry_ext_idx(UINT32_MAX), pending_load_img_done(false), entry_page_count(0), entry_total_count(0), swipe_mode(SwipeMode::None), entries_base_swipe_neg_offset(0), entries_base_swipe_neg_offset_incr(), extra_entry_swipe_show_h_count(0), focus_scale(1.0) {
         this->cursor_over_icon = TryFindLoadImage("ui/Main/OverIcon/Cursor");
         this->cursor_size = 0;
         this->border_over_icon = TryFindLoadImage("ui/Main/OverIcon/Border");
@@ -266,6 +280,10 @@ namespace ul::menu::ui {
         const auto time = std::chrono::system_clock::now();
         u64 entry_height_count;
         UL_ASSERT_TRUE(g_GlobalSettings.config.GetEntry(cfg::ConfigEntryId::MenuEntryHeightCount, entry_height_count));
+        g_FixedEntryHeightCount = LoadFixedEntryHeightCount();
+        if(g_FixedEntryHeightCount > 0) {
+            entry_height_count = g_FixedEntryHeightCount;
+        }
         g_EntryHeightCount = entry_height_count;
         this->ComputeSizes(g_EntryHeightCount);
 
@@ -341,6 +359,12 @@ namespace ul::menu::ui {
 
         // For the swipe animations, additional items are rendered (some will be outside the visible range)
         const auto entry_render_count = this->entry_page_count + this->extra_entry_swipe_show_h_count * g_EntryHeightCount;
+
+        // steamui: ease the focused tile's scale; it shrinks back while the cursor is moving
+        const auto focus_moving = this->IsCursorInTransition() || !this->IsNotInSwipe();
+        const auto focus_target_scale = focus_moving ? 1.0 : FocusScaleMax;
+        this->focus_scale += (focus_target_scale - this->focus_scale) * FocusScaleEaseFactor;
+        const u32 focus_scaled_entry_idx = cur_actual_entry_idx;
         bool retried_load_app_icon = false;
         for(u32 i = 0; i < entry_render_count; i++) {
             const auto entry_i = base_idx + i;
@@ -381,14 +405,20 @@ namespace ul::menu::ui {
                 auto &entry_alpha_incr = this->load_img_entry_incrs.at(entry_i);
                 entry_alpha_incr.Increment(entry_alpha);
 
+                // steamui: the focused tile (and its over icons) is drawn scaled around its center
+                const auto draw_scale = (entry_i == focus_scaled_entry_idx) ? this->focus_scale : 1.0;
+                const auto scaled_entry_size = (s32)((double)this->entry_size * draw_scale);
+                const auto scaled_entry_offset = (scaled_entry_size - (s32)this->entry_size) / 2;
+
                 #define _DRAW_OVER_ICON(name) { \
-                    const auto over_icon_x = (s32)(entry_x - (std::abs((s32)(this->name##_size - this->entry_size)) / 2)) - (s32)this->entries_base_swipe_neg_offset; \
-                    const auto over_icon_y = entry_y - (std::abs((s32)(this->name##_size - this->entry_size)) / 2); \
-                    drawer->RenderTexture(this->name##_over_icon, over_icon_x, over_icon_y, pu::ui::render::TextureRenderOptions({}, this->name##_size, this->name##_size, {}, {}, {})); \
+                    const auto scaled_over_size = (s32)((double)this->name##_size * draw_scale); \
+                    const auto over_icon_x = (s32)entry_x - ((scaled_over_size - (s32)this->entry_size) / 2) - (s32)this->entries_base_swipe_neg_offset; \
+                    const auto over_icon_y = (s32)entry_y - ((scaled_over_size - (s32)this->entry_size) / 2); \
+                    drawer->RenderTexture(this->name##_over_icon, over_icon_x, over_icon_y, pu::ui::render::TextureRenderOptions({}, scaled_over_size, scaled_over_size, {}, {}, {})); \
                 }
 
                 if(entry_icon != nullptr) {
-                    drawer->RenderTexture(entry_icon->Get(), (s32)entry_x - (s32)this->entries_base_swipe_neg_offset, entry_y, pu::ui::render::TextureRenderOptions(entry_alpha, this->entry_size, this->entry_size, {}, {}, {}));
+                    drawer->RenderTexture(entry_icon->Get(), (s32)entry_x - scaled_entry_offset - (s32)this->entries_base_swipe_neg_offset, (s32)entry_y - scaled_entry_offset, pu::ui::render::TextureRenderOptions(entry_alpha, scaled_entry_size, scaled_entry_size, {}, {}, {}));
 
                     const auto progress = this->entry_progresses.at(entry_i);
                     if(!std::isnan(progress)) {
@@ -456,7 +486,9 @@ namespace ul::menu::ui {
         // Cursor is an special over icon
         const auto cursor_x = x + HorizontalSideMargin + cur_actual_entry_idx_x * (this->entry_size + this->entry_h_margin) - (std::abs((s32)(this->cursor_size - this->entry_size)) / 2) + (this->IsCursorInTransition() ? this->cursor_transition_x : 0);
         const auto cursor_y = y + this->v_side_margin + cur_actual_entry_idx_y * (this->entry_size + EntryVerticalMargin) - (std::abs((s32)(this->cursor_size - this->entry_size)) / 2) + (this->IsCursorInTransition() ? this->cursor_transition_y : 0);
-        drawer->RenderTexture(this->cursor_over_icon, cursor_x, cursor_y, pu::ui::render::TextureRenderOptions({}, this->cursor_size, this->cursor_size, {}, {}, {}));
+        const auto scaled_cursor_size = (s32)((double)this->cursor_size * this->focus_scale);
+        const auto scaled_cursor_offset = (scaled_cursor_size - (s32)this->cursor_size) / 2;
+        drawer->RenderTexture(this->cursor_over_icon, (s32)cursor_x - scaled_cursor_offset, (s32)cursor_y - scaled_cursor_offset, pu::ui::render::TextureRenderOptions({}, scaled_cursor_size, scaled_cursor_size, {}, {}, {}));
 
         if((this->selected_entry_idx >= 0) && (this->selected_entry_icon != nullptr)) {
             const auto entry_size_factor = (double)this->entry_size / (double)MinScalableEntrySize;
@@ -717,7 +749,15 @@ namespace ul::menu::ui {
         this->entry_progresses.at(idx) = progress;
     }
 
+    bool EntryMenu::CanIncrementEntryHeightCount() {
+        return g_FixedEntryHeightCount == 0;
+    }
+
     void EntryMenu::IncrementEntryHeightCount() {
+        if(g_FixedEntryHeightCount > 0) {
+            return;
+        }
+
         auto h_count = g_EntryHeightCount;
         h_count++;
 
@@ -738,10 +778,14 @@ namespace ul::menu::ui {
     }
 
     bool EntryMenu::CanDecrementEntryHeightCount() {
-        return g_EntryHeightCount > 1;
+        return (g_FixedEntryHeightCount == 0) && (g_EntryHeightCount > 1);
     }
     
     void EntryMenu::DecrementEntryHeightCount() {
+        if(g_FixedEntryHeightCount > 0) {
+            return;
+        }
+
         auto h_count = g_EntryHeightCount;
         if(h_count > 1) {
             h_count--;

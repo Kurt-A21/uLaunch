@@ -7,6 +7,7 @@
 #include <ul/menu/ui/ui_QuickMenu.hpp>
 #include <ul/menu/ui/ui_InputBar.hpp>
 #include <ul/menu/ui/ui_EntryMenu.hpp>
+#include <ul/menu/ui/ui_HoverMedia.hpp>
 #include <ul/menu/ui/ui_Common.hpp>
 #include <ul/menu/menu_Entries.hpp>
 #include <ul/cfg/cfg_Config.hpp>
@@ -19,9 +20,13 @@ namespace ul::menu::ui {
             static constexpr s64 MessagesWaitTimeSeconds = 1;
             static constexpr s64 TimeDotsDisplayChangeWaitTimeSeconds = 1;
             static constexpr u32 LogoSize = 90;
+            static constexpr u32 EntryTextFadeStep = 32;
 
         private:
             bool last_quick_menu_on;
+            HoverMedia::Ref hover_media;
+            ClickableImage::Ref burger_icon;
+            u32 entry_text_alpha;
             pu::ui::elm::Image::Ref top_menu_default_bg;
             pu::ui::elm::Image::Ref top_menu_folder_bg;
             pu::ui::elm::Image::Ref top_menu_app_bg;

@@ -21,9 +21,23 @@ namespace ul::menu::ui {
                 return { 50, 50, 50, alpha };
             }
 
+            // steamui: optional slide-down dropdown mode, enabled by the theme ("slide_down": true)
+            static constexpr u32 SlideSteps = 10;
+            static constexpr s32 PanelPadding = 12;
+            static constexpr s32 PanelRadius = 18;
+            static constexpr pu::ui::Color PanelColor = { 23, 29, 37, 242 };
+            static inline constexpr pu::ui::Color MakeDimColor(const u8 alpha) {
+                return { 0, 0, 0, alpha };
+            }
+
         private:
             bool on;
             s32 bg_alpha;
+            s32 bg_alpha_max;
+            bool slide_down;
+            s32 slide_h;
+            pu::ui::SigmoidIncrementer<s32> slide_h_incr;
+            void RenderSlideDown(pu::ui::render::Renderer::Ref &drawer);
             pu::ui::elm::Menu::Ref options_menu;
             pu::ui::elm::MenuItem::Ref power_menu_item;
             pu::ui::elm::MenuItem::Ref controller_menu_item;
@@ -57,9 +71,7 @@ namespace ul::menu::ui {
                 return pu::ui::render::ScreenHeight;
             }
             
-            inline void Toggle() {
-                this->on = !this->on;
-            }
+            void Toggle();
 
             inline constexpr bool IsOn() {
                 return this->on && (this->bg_alpha > 0);

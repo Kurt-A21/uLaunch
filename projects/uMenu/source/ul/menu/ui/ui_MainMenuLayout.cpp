@@ -234,6 +234,7 @@ namespace ul::menu::ui {
                                 this->HandleHomebrewLaunch(cur_entry);
                             }
                             else {
+                                this->hover_media->StopSound();
                                 pu::audio::PlaySfx(this->launch_app_sfx);
 
                                 g_MenuApplication->FadeOutToNonLibraryApplet();
@@ -503,6 +504,17 @@ namespace ul::menu::ui {
     }
 
     void MainMenuLayout::menu_FocusedEntryChanged(const bool has_prev_entry, const bool is_prev_entry_suspended, const bool is_cur_entry_suspended) {
+        // steamui: per-game background art + sound preview, and fade the title back in
+        u64 hover_app_id = 0;
+        if(this->entry_menu->IsFocusedNonemptyEntry()) {
+            const auto &hover_entry = this->entry_menu->GetFocusedEntry();
+            if(hover_entry.Is<EntryType::Application>()) {
+                hover_app_id = hover_entry.app_info.app_id;
+            }
+        }
+        this->hover_media->SetTarget(hover_app_id);
+        this->entry_text_alpha = 0;
+
         this->cur_entry_main_text->SetVisible(true);
         this->cur_entry_sub_text->SetVisible(true);
         this->input_bar_changed = true;
@@ -682,6 +694,11 @@ namespace ul::menu::ui {
         this->menu_increment_sfx = nullptr;
         this->menu_decrement_sfx = nullptr;
 
+        // steamui: hovered game's art sits behind every other element
+        this->hover_media = HoverMedia::New();
+        this->Add(this->hover_media);
+        this->entry_text_alpha = 0xFF;
+
         // Load banners first
         this->top_menu_default_bg = pu::ui::elm::Image::New(0, 0, TryFindLoadImageHandle("ui/Main/TopMenuBackground/Default"));
         this->top_menu_folder_bg = pu::ui::elm::Image::New(0, 0, TryFindLoadImageHandle("ui/Main/TopMenuBackground/Folder"));
@@ -774,6 +791,20 @@ namespace ul::menu::ui {
         this->quick_menu = QuickMenu::New();
         this->Add(this->quick_menu);
 
+        // steamui: burger button (top right) opens the quick menu as a slide-down list
+        // Only themes that ship ui/Main/BurgerIcon get the button
+        auto burger_tex = TryFindLoadImageHandle("ui/Main/BurgerIcon");
+        const auto has_burger = burger_tex->Get() != nullptr;
+        this->burger_icon = ClickableImage::New(0, 0, burger_tex);
+        this->burger_icon->SetVisible(has_burger);
+        if(has_burger) {
+            this->burger_icon->SetOnClick([&]() {
+                this->quick_menu->Toggle();
+            });
+            g_GlobalSettings.ApplyConfigForElement("main_menu", "burger_icon", this->burger_icon);
+        }
+        this->Add(this->burger_icon);
+
         this->startup_tp = std::chrono::steady_clock::now();
         UL_LOG_INFO("MainMenuLayout created in %lld ms", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - time).count());
     }
@@ -814,6 +845,7 @@ namespace ul::menu::ui {
     }
 
     void MainMenuLayout::DisposeSfx() {
+        this->hover_media->StopSound();
         pu::audio::DestroySfx(this->post_suspend_sfx);
         pu::audio::DestroySfx(this->cursor_move_sfx);
         pu::audio::DestroySfx(this->page_move_sfx);
@@ -1037,7 +1069,7 @@ namespace ul::menu::ui {
                 this->is_incrementing_decrementing = false;
             }
         }
-        else if(keys_down & HidNpadButton_Plus) {
+        else if((keys_down & HidNpadButton_Plus) && this->entry_menu->CanIncrementEntryHeightCount()) {
             if(!this->is_incrementing_decrementing) {
                 pu::audio::PlaySfx(this->menu_increment_sfx);
                 this->is_incrementing_decrementing = true;
@@ -1048,7 +1080,14 @@ namespace ul::menu::ui {
     }
 
     void MainMenuLayout::OnMenuUpdate() {
-        
+        // steamui: fade the focused entry's title/author back in after a focus change
+        if(this->entry_text_alpha < 0xFF) {
+            this->entry_text_alpha = std::min<u32>(0xFF, this->entry_text_alpha + EntryTextFadeStep);
+            auto clr = g_MenuApplication->GetTextColor();
+            const auto alpha = static_cast<u8>((static_cast<u32>(clr.a) * this->entry_text_alpha) / 0xFF);
+            this->cur_entry_main_text->SetColor(clr.WithAlpha(alpha));
+            this->cur_entry_sub_text->SetColor(clr.WithAlpha(alpha));
+        }
     }
 
     bool MainMenuLayout::OnHomeButtonPress() {
