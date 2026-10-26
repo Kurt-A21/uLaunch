@@ -186,9 +186,22 @@ python3 get_homebrew.py /Volumes/SWITCH --with-missioncontrol
 | Status Monitor | Live temperatures and clocks while overclocking |
 | sphaira | Homebrew menu (replaces hbmenu): app list, file browser, Themezer theme browser, game installer |
 | NXThemes Installer | Installs NXThemes on Nintendo's HOME menu (theme patches for your firmware included) |
+| SaltyNX | Background plugin loader that FPSLocker needs. Installs the newest version (2.x, which its author marks experimental), because FPSLocker 3.5 needs 2.x |
+| FPSLocker | Overlay (Ultrahand → FPSLocker): set an FPS target per game (e.g. 60 in 30 FPS games), and the docked refresh rate. Some games need a config: use *Check/download config file* in the overlay. Don't combine it with 60 FPS cheats/mods |
+| NX-FanControl | Your own fan curve (sysmodule + overlay: Ultrahand → NX-FanControl). Useful with the Performance preset. Keep Status Monitor updated: old versions that read the fan directly can make the console reboot while it runs |
+| tico | Emulator frontend with a console-style UI: N64, PlayStation, Saturn, Dreamcast/Naomi, arcade, GameCube/Wii, 3DS. See below |
 | MissionControl (optional) | Use PS4/PS5/Xbox controllers over Bluetooth |
 
-All of them show up on the home screen automatically.
+The apps show up on the home screen automatically; FPSLocker and NX-FanControl are overlays, so they're in Ultrahand (L + D-pad Down + right stick). `get_homebrew.py` prints how to turn off each background sysmodule it adds, in case one ever causes trouble (delete its `flags/boot2.flag`).
+
+### tico (emulators)
+
+1. Make sure a take-over game is set (see *Full memory for big ports* above): emulators need the full memory.
+2. Start **tico** from the home screen once. It finishes setting itself up and downloads the emulator cores you pick (needs Wi-Fi; the emuMMC hosts file only blocks Nintendo, so this works).
+3. Put dumps of games you own in `tico/roms/<system>/` on the SD card, e.g. `tico/roms/n64`, `tico/roms/gc`, `tico/roms/wii`. Some systems also need BIOS files you dump yourself.
+4. For GameCube, Wii and 3DS, set the take-over game's preset to **Performance** (burger menu → Performance), since tico runs as that game. tico's GameCube/Wii core is an experimental alpha, so expect some games to crash.
+
+Only `tico.nro` goes on your home row; the cores it keeps next to itself don't.
 
 ## Tests
 

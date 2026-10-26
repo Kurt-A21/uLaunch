@@ -37,6 +37,9 @@ int main(){
     CHECK(SyncHomebrewEntries(root) == 1 && menu_nros().count("sdmc:/switch/Moonlight.nro"), "newly copied app appears on next load");
     std::remove("sdmc:/ulaunch/steamui/hb_known.txt");
     CHECK(SyncHomebrewEntries(root) == 1, "deleting hb_known.txt re-adds removed apps");
+    // tico chainloads emulator cores: only tico.nro goes on the row
+    mkdir("sdmc:/switch/tico", 0777); touch("sdmc:/switch/tico/tico.nro"); touch("sdmc:/switch/tico/dolphin_core.nro");
+    CHECK(SyncHomebrewEntries(root) == 1 && menu_nros().count("sdmc:/switch/tico/tico.nro") && !menu_nros().count("sdmc:/switch/tico/dolphin_core.nro"), "tico added, its core NROs aren't");
     std::printf("\n%s (%d failure%s)\n", fails ? "FAILED" : "ALL PASSED", fails, fails == 1 ? "" : "s");
     return fails;
 }

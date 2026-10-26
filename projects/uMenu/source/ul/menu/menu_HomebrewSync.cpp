@@ -17,6 +17,25 @@ namespace ul::menu {
         constexpr const char KnownHomebrewListPath[] = "sdmc:/ulaunch/steamui/hb_known.txt";
         constexpr size_t MaxScannedHomebrew = 256;
 
+        // Apps that keep helper NROs next to themselves (e.g. emulator cores they chainload): only the app itself
+        // goes on the home row, not every helper
+        struct OwnedFolder {
+            const char *folder;
+            const char *app;
+        };
+        constexpr OwnedFolder OwnedFolders[] = {
+            { "sdmc:/switch/tico/", "sdmc:/switch/tico/tico.nro" },
+        };
+
+        inline bool IsHelperNro(const std::string &nro) {
+            for(const auto &owned: OwnedFolders) {
+                if((nro.rfind(owned.folder, 0) == 0) && (nro != owned.app)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         void CollectMenuHomebrew(const std::string &path, std::set<std::string> &out_nros, const u32 depth = 0) {
             if(depth > 8) {
                 return;
@@ -111,7 +130,7 @@ namespace ul::menu {
         u32 added = 0;
         for(const auto &nro: found) {
             // hbmenu and uManager are already handled by uLaunch itself
-            if((nro == HbmenuPath) || (nro == ManagerPath)) {
+            if((nro == HbmenuPath) || (nro == ManagerPath) || IsHelperNro(nro)) {
                 continue;
             }
             if((in_menu.count(nro) == 0) && (known.count(nro) == 0)) {

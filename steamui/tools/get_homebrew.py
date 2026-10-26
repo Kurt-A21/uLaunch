@@ -21,7 +21,9 @@ WEB = os.environ.get("STEAMUI_GITHUB_WEB", "https://github.com")
 # kind: "nro" -> copied to dest; "zip_sd" -> zip extracted onto the SD root (dest, if given, is where a bare .nro
 #       at the zip's top level goes); "ovl" -> copied to switch/.overlays; "payload" -> copied to bootloader/payloads
 # first_only: stop after the first matching download. any_release: if the latest release lacks the file, use the
-# newest release that has it. source: (branch, folder, dest) -> that folder of the repo's source zip is copied to dest.
+# newest release that has it. newest: use the newest release that has the file, even one marked pre-release (for
+# pairs that must match, like SaltyNX + FPSLocker). needs: other packages installed along with it.
+# source: (branch, folder, dest) -> that folder of the repo's source zip is copied to dest.
 PACKAGES = [
     # --- core (CFW itself) ---
     dict(key="atmosphere", group="core", repo="Atmosphere-NX/Atmosphere", desc="Atmosphere CFW",
@@ -51,12 +53,20 @@ PACKAGES = [
          files=[(r"^NXThemesInstaller.*\.nro$", "nro", "switch/NXThemesInstaller/NXThemesInstaller.nro")]),
     dict(key="themepatches", group="apps", repo="exelix11/theme-patches", desc="Theme patches for NXThemes (it can't download them on an offline emuMMC)",
          source=("master", "systemPatches", "themes/systemPatches")),
+    dict(key="saltynx", group="apps", repo="masagrator/SaltyNX", desc="SaltyNX: game plugin loader (needed by FPSLocker)", newest=True,
+         files=[(r"^SaltyNX\.zip$", "zip_sd", None)]),
+    dict(key="fpslocker", group="apps", repo="masagrator/FPSLocker", desc="FPSLocker: custom FPS / refresh rate per game (overlay)", needs=["saltynx"],
+         files=[(r"^FPSLocker\.ovl$", "ovl", None)]),
+    dict(key="fancontrol", group="apps", repo="Zathawo/NX-FanControl", desc="NX-FanControl: custom fan curve (sysmodule + overlay)",
+         files=[(r"^NX-?FanControl.*\.zip$", "zip_sd", None)]),
+    dict(key="tico", group="apps", repo="ticohq/tico", desc="tico: emulator frontend (N64, PS1, Saturn, Dreamcast, GameCube/Wii, 3DS...)", first_only=True,
+         files=[(r"^tico\.nro$", "nro", "switch/tico/tico.nro"), (r"^tico.*\.zip$", "zip_sd", "switch/tico/tico.nro")]),
     # --- optional ---
     dict(key="missioncontrol", group="optional", repo="ndeadly/MissionControl", desc="MissionControl: PS4/PS5/Xbox controllers over Bluetooth",
          files=[(r"^MissionControl-.*\.zip$", "zip_sd", None)]),
 ]
 
-SAFE_TOP_LEVEL = {"atmosphere", "bootloader", "switch", "config", "ulaunch", "themes", "payload.bin", "hbmenu.nro", "boot.dat", "boot.ini"}
+SAFE_TOP_LEVEL = {"atmosphere", "bootloader", "switch", "config", "ulaunch", "themes", "SaltySD", "tico", "payload.bin", "hbmenu.nro", "boot.dat", "boot.ini"}
 
 
 def http_json(url):
@@ -136,8 +146,20 @@ def install_source_folder(pkg, sd: Path, dry):
 def pick_assets(pkg):
     """[(pattern, kind, dest, asset, tag)] for each file the package wants, from the latest release
     (or, with any_release, the newest release that has it)."""
-    latest = http_json(f"{API}/repos/{pkg['repo']}/releases/latest")
     picks = []
+    if pkg.get("newest"):
+        for rel in http_json(f"{API}/repos/{pkg['repo']}/releases?per_page=20"):
+            if rel.get("draft"):
+                continue
+            for pattern, kind, dest in pkg["files"]:
+                asset = next((a for a in rel.get("assets", []) if re.match(pattern, a["name"], re.I)), None)
+                if asset is not None:
+                    tag = rel.get("tag_name", "?") + (" (marked pre-release/experimental by its author)" if rel.get("prerelease") else "")
+                    picks.append((pattern, kind, dest, asset, tag))
+            if picks:
+                return picks
+        return picks
+    latest = http_json(f"{API}/repos/{pkg['repo']}/releases/latest")
     for pattern, kind, dest in pkg["files"]:
         asset = next((a for a in latest.get("assets", []) if re.match(pattern, a["name"], re.I)), None)
         tag = latest.get("tag_name", "?")
@@ -166,8 +188,12 @@ def install(pkg, sd: Path, dry):
             if dry:
                 print(f"      would extract {asset['name']} onto the SD card")
             else:
-                n = len(safe_extract(data, sd, dry, nro_dest=dest))
-                print(f"      extracted {asset['name']} ({n} files)")
+                written = safe_extract(data, sd, dry, nro_dest=dest)
+                print(f"      extracted {asset['name']} ({len(written)} files)")
+                # Name any background sysmodules it added, so they're easy to turn off if needed
+                for tid in sorted({p.relative_to(sd).parts[2] for p in written
+                                   if p.relative_to(sd).parts[:2] == ("atmosphere", "contents") and p.name == "boot2.flag"}):
+                    print(f"      sysmodule {tid}: starts at boot (to turn it off, delete atmosphere/contents/{tid}/flags/boot2.flag)")
         else:
             if kind == "ovl":
                 dest = f"switch/.overlays/{asset['name']}"
@@ -208,6 +234,9 @@ def main():
 
     if a.only:
         wanted = {k.strip() for k in a.only.split(",")}
+        for p in PACKAGES:
+            if p["key"] in wanted:
+                wanted.update(p.get("needs", []))
         pkgs = [p for p in PACKAGES if p["key"] in wanted]
     else:
         pkgs = [p for p in PACKAGES if p["group"] == "apps" or (p["group"] == "core" and not a.skip_core)
@@ -226,6 +255,14 @@ def main():
     if any(p["key"] in ("nxthemes", "themepatches") for p in pkgs):
         print("NXThemes: themes go in themes/ on the SD card. They show on Nintendo's HOME menu, i.e. after switching")
         print("  steamui off (burger menu -> Themes -> Nintendo HOME menu). uManager -> Activate brings steamui back.")
+    if any(p["key"] == "fpslocker" for p in pkgs):
+        print("FPSLocker: Ultrahand -> FPSLocker. Some games need a per-game config: use 'Check/download config file' there.")
+    if any(p["key"] == "fancontrol" for p in pkgs):
+        print("NX-FanControl: set the curve in Ultrahand -> NX-FanControl. Keep Status Monitor up to date (old versions")
+        print("  that read the fan directly can make the console reboot while NX-FanControl runs).")
+    if any(p["key"] == "tico" for p in pkgs):
+        print("tico: start it once from the home screen to finish setup and download emulator cores (needs Wi-Fi).")
+        print("  Put your own game dumps in tico/roms/<system>/ (e.g. tico/roms/n64, tico/roms/gc, tico/roms/wii).")
     if any(p["key"] == "missioncontrol" for p in pkgs):
         print("MissionControl: if the console won't boot after an Atmosphere update, delete atmosphere/contents/010000000000BD00")
 

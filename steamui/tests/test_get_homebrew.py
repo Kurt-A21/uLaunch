@@ -97,6 +97,45 @@ with tempfile.TemporaryDirectory() as d:
     subprocess.run([sys.executable, "-I", str(TOOL), str(sd), "--only", "sphaira,nxthemes,themepatches", "--dry-run"], env=env, capture_output=True, text=True)
     check(before == sorted(p.relative_to(sd).as_posix() for p in sd.rglob("*")), "--dry-run changes nothing")
 
+# ---- Performance + emulator apps ----
+ROUTES.update({
+    # SaltyNX: GitHub's "latest" is still 1.9.2, but FPSLocker 3.5 needs 2.x, which is marked experimental
+    "/repos/masagrator/SaltyNX/releases/latest": {"tag_name": "1.9.2", "assets": [asset("SaltyNX.zip")]},
+    "/repos/masagrator/SaltyNX/releases?per_page=20": [
+        {"tag_name": "2.1.0", "prerelease": True, "assets": [asset("SaltyNX_Debug.zip"), asset("SaltyNX-2.1.0.zip")]},
+        {"tag_name": "1.9.2", "assets": [asset("SaltyNX.zip")]}],
+    "/dl/SaltyNX-2.1.0.zip": b"",
+    "/repos/masagrator/FPSLocker/releases/latest": {"tag_name": "3.5.0", "assets": [asset("Debug.zip"), asset("FPSLocker.ovl")]},
+    "/dl/FPSLocker.ovl": b"FPSLOCKER",
+    "/repos/Zathawo/NX-FanControl/releases/latest": {"tag_name": "1.0.3", "assets": [asset("NXFanControl1.0.3.zip")]},
+    "/dl/NXFanControl1.0.3.zip": mkzip({
+        "atmosphere/contents/00FF0000B378D640/exefs.nsp": b"FAN-SYS", "atmosphere/contents/00FF0000B378D640/flags/boot2.flag": b"",
+        "atmosphere/contents/00FF0000B378D640/toolbox.json": b"{}",
+        "switch/.overlays/NX-FanControl.ovl": b"FAN-OVL", "config/NX-FanControl/config.dat": b"DEFAULT-CURVE"}),
+    "/repos/ticohq/tico/releases/latest": {"tag_name": "0.7.8", "assets": [asset("tico.nro")]},
+    "/dl/tico.nro": b"TICO",
+})
+# The 2.1.0 zip: SaltySD folder + its sysmodule
+ROUTES["/repos/masagrator/SaltyNX/releases?per_page=20"][0]["assets"][1] = asset("SaltyNX.zip")
+ROUTES["/dl/SaltyNX.zip"] = mkzip({"SaltySD/saltysd_core.elf": b"CORE-2.1.0", "SaltySD/plugins/README.md": b"",
+                                   "atmosphere/contents/0000000000534C56/exefs.nsp": b"SALTY-SYS",
+                                   "atmosphere/contents/0000000000534C56/flags/boot2.flag": b""})
+with tempfile.TemporaryDirectory() as d:
+    sd = Path(d)
+    (sd / "config/NX-FanControl").mkdir(parents=True); (sd / "config/NX-FanControl/config.dat").write_bytes(b"MY-CURVE")
+    out = subprocess.run([sys.executable, "-I", str(TOOL), str(sd), "--only", "fpslocker,fancontrol,tico"], env=env, capture_output=True, text=True)
+    print(out.stdout.rstrip())
+    print("== Results ==")
+    check(out.returncode == 0 and "need attention" not in out.stdout, "FPSLocker, NX-FanControl, tico installed without errors")
+    check((sd / "SaltySD/saltysd_core.elf").read_bytes() == b"CORE-2.1.0", "--only fpslocker also installs SaltyNX, and the 2.x it needs (not GitHub's 'latest' 1.9.2)")
+    check("experimental" in out.stdout, "says SaltyNX 2.x is marked experimental by its author")
+    check((sd / "atmosphere/contents/0000000000534C56/flags/boot2.flag").exists(), "SaltyNX sysmodule installed and set to start at boot")
+    check((sd / "switch/.overlays/FPSLocker.ovl").read_bytes() == b"FPSLOCKER", "FPSLocker overlay in switch/.overlays (shows in Ultrahand)")
+    check((sd / "atmosphere/contents/00FF0000B378D640/exefs.nsp").exists() and (sd / "switch/.overlays/NX-FanControl.ovl").exists(), "NX-FanControl sysmodule + overlay installed")
+    check((sd / "config/NX-FanControl/config.dat").read_bytes() == b"MY-CURVE", "an existing fan curve is kept")
+    check("delete atmosphere/contents/00FF0000B378D640/flags/boot2.flag" in out.stdout and "0000000000534C56" in out.stdout, "tells you how to turn each new sysmodule off")
+    check((sd / "switch/tico/tico.nro").read_bytes() == b"TICO", "tico in switch/tico/tico.nro (the path it requires; shows on the home row)")
+
 srv.shutdown()
 print("ALL PASSED" if not fails else f"FAILED: {fails}")
 sys.exit(1 if fails else 0)
