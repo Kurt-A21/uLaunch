@@ -1,4 +1,4 @@
-"""Builds the Deck Night look for the Ultrahand overlay (the L + D-pad Down + R-stick menu):
+"""Builds the Deck Night look for the Ultrahand overlay (the ZL + ZR + D-pad Down menu):
    config/ultrahand/themes/deck-night.ini      selectable theme
    config/ultrahand/theme.ini                  same, active by default
    config/ultrahand/wallpapers/deck-night.rgba selectable wallpaper (448x720 raw RGBA8888)

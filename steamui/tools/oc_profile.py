@@ -15,7 +15,7 @@ Notes
   * The home menu itself is 0100000000001000.
   * sys-clk rounds to the nearest real clock and caps GPU in handheld (460 MHz, 614 MHz on
     Mariko/OLED/Lite) and when charging from a non-official charger (768 MHz).
-  * You can also change clocks live on the console: Ultrahand overlay (L + D-pad Down + R-stick) > sys-clk.
+  * You can also change clocks live on the console: Ultrahand overlay (ZL + ZR + D-pad Down) > sys-clk.
 """
 import re, sys
 from pathlib import Path
@@ -44,7 +44,7 @@ PRESETS = {
 
 HEADER = """; sys-clk configuration (managed in part by steamui oc_profile.py)
 ; One [TITLEID] section per game. Values in MHz; missing/0 = stock clocks.
-; Live changes on the console: Ultrahand overlay (L + D-pad Down + R-stick) > sys-clk.
+; Live changes on the console: Ultrahand overlay (ZL + ZR + D-pad Down) > sys-clk.
 
 [values]
 ; how often sys-clk re-checks the running game and applies its profile

@@ -122,7 +122,7 @@ sys-clk sets the CPU, GPU and RAM clocks for each game, by title ID, in `config/
   - **Set preset** offers Stock, Battery, Balanced and Performance; your choice is saved in sys-clk for that game.
   - **Pause/Resume overclocking** turns sys-clk off or on for everything.
   - For homebrew and ports, the preset goes on the take-over game they run as.
-- **During a game:** open the Ultrahand overlay (L + D-pad Down + right stick), go to **sys-clk**, and change clocks live.
+- **During a game:** open the Ultrahand overlay (ZL + ZR + D-pad Down, or swipe in from the screen edge), go to **sys-clk**, and change clocks live.
 - **From your computer:** use `oc_profile.py` with a preset:
 
 ```
@@ -182,7 +182,7 @@ python3 get_homebrew.py /Volumes/SWITCH --with-missioncontrol
 | ftpd | Copy files over Wi-Fi |
 | Moonlight | Stream games from your PC (e.g. your PC copy of Metal Gear Rising) |
 | Homebrew App Store | Browse and update homebrew |
-| Ultrahand | Overlay menu (L + D-pad Down + right stick), hosting the sys-clk and Status Monitor overlays |
+| Ultrahand | Overlay menu (ZL + ZR + D-pad Down, or swipe in from the screen edge), hosting the sys-clk and Status Monitor overlays |
 | Status Monitor | Live temperatures and clocks while overclocking |
 | sphaira | Homebrew menu with a file browser, Themezer theme browser and game installer. It's an app on your home screen; it can also take over the Album's homebrew menu if you turn that on in its settings |
 | NXThemes Installer | Installs NXThemes on Nintendo's HOME menu (theme patches for your firmware included) |
@@ -192,7 +192,7 @@ python3 get_homebrew.py /Volumes/SWITCH --with-missioncontrol
 | tico | Emulator frontend with a console-style UI: N64, PlayStation, Saturn, Dreamcast/Naomi, arcade, GameCube/Wii, 3DS. See below |
 | MissionControl (optional) | Use PS4/PS5/Xbox controllers over Bluetooth |
 
-The apps show up on the home screen automatically; FPSLocker and NX-FanControl are overlays, so they're in Ultrahand (L + D-pad Down + right stick). `get_homebrew.py` prints how to turn off each background sysmodule it adds, in case one ever causes trouble (delete its `flags/boot2.flag`).
+The apps show up on the home screen automatically; FPSLocker and NX-FanControl are overlays, so they're in Ultrahand (ZL + ZR + D-pad Down, or swipe in from the screen edge). `get_homebrew.py` prints how to turn off each background sysmodule it adds, in case one ever causes trouble (delete its `flags/boot2.flag`).
 
 ### tico (emulators)
 

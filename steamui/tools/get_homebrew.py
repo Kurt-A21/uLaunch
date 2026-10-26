@@ -44,7 +44,7 @@ PACKAGES = [
          files=[(r"^Moonlight-Switch\.nro$", "nro", "switch/Moonlight-Switch/Moonlight-Switch.nro")]),
     dict(key="appstore", group="apps", repo="fortheusers/hb-appstore", desc="Homebrew App Store",
          files=[(r"^switch-extracttosd\.zip$", "zip_sd", None)]),
-    dict(key="ultrahand", group="apps", repo="ppkantorski/Ultrahand-Overlay", desc="Ultrahand: overlay menu (L+DDown+RS)",
+    dict(key="ultrahand", group="apps", repo="ppkantorski/Ultrahand-Overlay", desc="Ultrahand: overlay menu (ZL+ZR+D-pad Down)",
          files=[(r"^(sdout|Ultrahand.*)\.zip$", "zip_sd", None)]),
     dict(key="statusmonitor", group="apps", repo="masagrator/Status-Monitor-Overlay", desc="Status Monitor: temps/clocks overlay",
          files=[(r"^Status-Monitor-Overlay.*\.zip$", "zip_sd", None), (r"^Status-Monitor-Overlay\.ovl$", "ovl", None)]),

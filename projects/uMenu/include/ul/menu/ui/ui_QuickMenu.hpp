@@ -1,5 +1,6 @@
 
 #pragma once
+#include <ul/menu/ui/ui_ShoulderTap.hpp>
 #include <pu/Plutonium>
 #include <ul/menu/smi/sf/sf_PrivateService.hpp>
 
@@ -32,6 +33,7 @@ namespace ul::menu::ui {
 
         private:
             bool on;
+            ShoulderTap shoulder_tap;
             s32 bg_alpha;
             s32 bg_alpha_max;
             bool slide_down;

@@ -204,7 +204,8 @@ namespace ul::menu::ui {
             this->options_menu->OnInput(keys_down, keys_up, keys_held, touch_pos);
         }
 
-        if((keys_down & HidNpadButton_ZL) || (keys_down & HidNpadButton_ZR)) {
+        // steamui: ZL/ZR toggle on a clean tap (on release), so Ultrahand's ZL + ZR + D-pad Down combo doesn't open the menu
+        if(this->shoulder_tap.Feed(keys_down, keys_up, keys_held)) {
             this->Toggle();
         }
         else if((keys_down & HidNpadButton_B) || (keys_down & HidNpadButton_A)) {

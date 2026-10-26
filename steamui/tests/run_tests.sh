@@ -38,6 +38,8 @@ $CXX "${F[@]}" -fsanitize=address,undefined "$T/test_unlock.cpp" "$OUT/up.o" -o 
 echo "### Console-style dialogs: selection, scrolling, held repeat"
 $CXX "${F[@]}" -fsanitize=address,undefined "$T/test_dialog.cpp" -o "$OUT/test_dialog"
 $CXX -std=gnu++20 -Wall -Werror -fsanitize=address,undefined -I"$SRC/include" "$T/test_dialog_text.cpp" -o "$OUT/test_dialog_text"
+$CXX "${F[@]}" -fsanitize=address,undefined "$T/test_shoulder.cpp" -o "$OUT/test_shoulder"
+"$OUT/test_shoulder"
 "$OUT/test_dialog_text"
 "$OUT/test_dialog"
 "$OUT/test_unlock"
