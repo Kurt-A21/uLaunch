@@ -2,6 +2,7 @@
 #include <ul/menu/ui/ui_MenuApplication.hpp>
 #include <ul/fs/fs_Stdio.hpp>
 #include <ul/menu/smi/smi_Commands.hpp>
+#include <ul/ul_HomeMenuSwitch.hpp>
 
 extern ul::menu::ui::GlobalSettings g_GlobalSettings;
 extern ul::menu::ui::MenuApplication::Ref g_MenuApplication;
@@ -61,6 +62,13 @@ namespace ul::menu::ui {
             }
         }
         
+        // steamui: Nintendo's HOME menu (where NXThemes show) as the first entry
+        auto nintendo_item = pu::ui::elm::MenuItem::New("Nintendo HOME menu  ·  NXThemes");
+        nintendo_item->AddOnKey(std::bind(&ThemesMenuLayout::nintendo_DefaultKey, this));
+        nintendo_item->SetColor(g_MenuApplication->GetTextColor());
+        nintendo_item->SetIcon(TryFindLoadImageHandle("ui/Main/QuickIcon/Themes"));
+        this->themes_menu->AddItem(nintendo_item);
+
         for(const auto &theme: this->loaded_themes) {
             if(theme.IsValid()) {
                 std::string theme_icon_path;
@@ -88,11 +96,34 @@ namespace ul::menu::ui {
             }
         }
 
-        this->themes_menu->SetSelectedIndex(0);
+        // Focus starts on the active theme, right below the Nintendo HOME menu entry
+        this->themes_menu->SetSelectedIndex(FirstThemeIndex);
+    }
+
+    void ThemesMenuLayout::nintendo_DefaultKey() {
+        const auto has_nxtheme = fs::ExistsDirectory(std::string(homemenu::DefaultRoot) + homemenu::ContentsDir + "/romfs");
+        std::string msg = "steamui turns off and the console restarts into Nintendo's own HOME menu";
+        msg += has_nxtheme ? ", with your NXTheme.\n\n" : ".\nNo NXTheme is installed yet: install one with NXThemes Installer first to see it there.\n\n";
+        msg += "To come back to steamui: open the homebrew menu (Album), run uManager and choose Activate.";
+        const auto option = g_MenuApplication->DisplayDialog("Nintendo HOME menu", msg, { "Switch and restart", GetLanguageString("cancel") }, true);
+        if(option != 0) {
+            return;
+        }
+        if(!homemenu::Deactivate()) {
+            g_MenuApplication->DisplayDialog("Nintendo HOME menu", "Couldn't switch: steamui's backup copy (ulaunch/bin/uSystem/exefs.nsp) is missing, so turning it off now would leave no way back.\nCopy the steamui SdOut files to the SD card again and retry.", { GetLanguageString("ok") }, true);
+            return;
+        }
+        pu::audio::PlaySfx(this->theme_change_sfx);
+        g_MenuApplication->FadeOut();
+        RebootSystem();
     }
 
     void ThemesMenuLayout::theme_DefaultKey() {
-        const auto idx = this->themes_menu->GetSelectedIndex();
+        const auto menu_idx = this->themes_menu->GetSelectedIndex();
+        if(menu_idx < static_cast<s32>(FirstThemeIndex)) {
+            return;
+        }
+        const auto idx = menu_idx - FirstThemeIndex;
         const auto &selected_theme = this->loaded_themes.at(idx);
         if(selected_theme.IsValid()) {
             if(selected_theme.IsSame(g_GlobalSettings.active_theme)) {

@@ -20,6 +20,10 @@ namespace ul::menu::ui {
             pu::audio::Sfx back_sfx;
 
             void theme_DefaultKey();
+            void nintendo_DefaultKey();
+
+            // steamui: first entry switches to Nintendo's HOME menu (NXThemes); themes follow it
+            static constexpr u32 FirstThemeIndex = 1;
 
         public:
             ThemesMenuLayout();

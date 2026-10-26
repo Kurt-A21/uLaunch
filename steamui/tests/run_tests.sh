@@ -40,6 +40,13 @@ $CXX "${F[@]}" -fsanitize=address,undefined "$T/test_dialog.cpp" -o "$OUT/test_d
 "$OUT/test_dialog"
 "$OUT/test_unlock"
 
+echo "### Switching steamui <-> Nintendo HOME menu (NXThemes kept)"
+$CXX -std=gnu++20 -Wall -Werror -fsanitize=address,undefined -I"$ROOT/libs/uCommon/include" "$T/test_homemenu.cpp" -o "$OUT/test_homemenu"
+"$OUT/test_homemenu"
+
+echo "### Homebrew downloader: sphaira, NXThemes Installer, theme patches (fake GitHub)"
+python3 "$T/test_get_homebrew.py" | tail -14
+
 echo "### Burger-menu overclock presets == oc_profile.py presets"
 $CXX "${F[@]}" -Werror -D__SWITCH__ -c "$SRC/source/ul/menu/ui/ui_PerformancePresets.cpp" -o "$OUT/pp.o"
 $CXX "${F[@]}" -D__SWITCH__ "$T/test_presets.cpp" "$OUT/pp.o" -o "$OUT/test_presets"

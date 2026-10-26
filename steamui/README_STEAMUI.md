@@ -36,9 +36,7 @@ Theme: **Deck Night** (`ulaunch/themes/DeckNight.ultheme`).
 
 - Atmosphere 1.12.1 (or anything recent that supports your firmware).
 - Firmware 21.2.0. Anything up to 22.5.0 works; **23.x is not supported by uLaunch yet.**
-- **The steamui build replaces the stock home menu (and NXThemes).** uLaunch lives in `atmosphere/contents/0100000000001000`, the same folder NXThemes uses. So:
-  - remove any installed NXTheme before installing uLaunch
-  - don't use NXThemes Installer while uLaunch is installed
+- **steamui replaces Nintendo's HOME menu while it's active.** NXThemes theme Nintendo's HOME menu, so they don't show inside steamui. They can live side by side, and you can switch between the two whenever you like (see *Themes* below).
 
 ## Install
 
@@ -47,7 +45,26 @@ Theme: **Deck Night** (`ulaunch/themes/DeckNight.ultheme`).
 3. Boot CFW, then pick your user. Go to **burger menu → Themes** and choose **Deck Night**.
 4. Add hover art and sounds (optional, see below).
 
-**To uninstall:** delete `atmosphere/contents/0100000000001000`. This gives you the stock home menu back.
+**To uninstall:** delete `atmosphere/contents/0100000000001000/exefs.nsp` (only that file, so an installed NXTheme stays), or use uManager → Deactivate.
+
+## Themes
+
+There are two kinds, and you can switch between them whenever you want:
+
+| | Where | How to change |
+|---|---|---|
+| **steamui themes** (Deck Night and other `.ultheme` files) | `ulaunch/themes/` | Burger menu → **Themes** → pick one. The menu restarts with it. |
+| **NXThemes**, for Nintendo's own HOME menu | `themes/` (install with **NXThemes Installer**) | Install in NXThemes Installer, then switch to Nintendo's HOME menu (below). |
+
+**Getting NXThemes:**
+- Browse and download them from [Themezer](https://themezer.net) on your computer, or with sphaira's Themezer browser on the console.
+- Put the `.nxtheme` files in `themes/<theme name>/` and install them with NXThemes Installer (it's added to your home screen automatically).
+- The theme patches NXThemes needs for your firmware are already in `themes/systemPatches` (via `get_homebrew.py`), because an offline emuMMC can't download them. Themes work on firmware up to 22.x; NXThemes doesn't support 23.0 yet.
+
+**Switching between steamui and Nintendo's HOME menu:**
+- **To Nintendo's HOME menu (your NXTheme):** burger menu → Themes → **Nintendo HOME menu · NXThemes** → *Switch and restart*. Only steamui's `exefs.nsp` is removed; its backup stays in `ulaunch/bin/uSystem/`.
+- **Back to steamui:** in Nintendo's HOME menu, open the Album (the homebrew menu: sphaira, or hbmenu if sphaira isn't set as it), run **uManager**, choose **Activate**, and reboot.
+- Neither direction touches your NXTheme, games, saves or settings. (Stock uManager's Deactivate deleted the whole folder, NXTheme included; this build only removes that one file.)
 
 ## Homebrew apps and ports
 
@@ -167,6 +184,8 @@ python3 get_homebrew.py /Volumes/SWITCH --with-missioncontrol
 | Homebrew App Store | Browse and update homebrew |
 | Ultrahand | Overlay menu (L + D-pad Down + right stick), hosting the sys-clk and Status Monitor overlays |
 | Status Monitor | Live temperatures and clocks while overclocking |
+| sphaira | Homebrew menu (replaces hbmenu): app list, file browser, Themezer theme browser, game installer |
+| NXThemes Installer | Installs NXThemes on Nintendo's HOME menu (theme patches for your firmware included) |
 | MissionControl (optional) | Use PS4/PS5/Xbox controllers over Bluetooth |
 
 All of them show up on the home screen automatically.
@@ -177,6 +196,8 @@ All of them show up on the home screen automatically.
 - The hover art/sound logic, with memory and thread sanitizers.
 - Homebrew auto-adding.
 - `validate_theme.py`, which checks the theme against the menu code and checks the screen layout.
+- Switching between steamui and Nintendo's HOME menu on a fake SD card (an NXTheme must survive every round trip).
+- `get_homebrew.py` against a fake GitHub: where sphaira, NXThemes Installer and the theme patches end up.
 
 ## Building
 

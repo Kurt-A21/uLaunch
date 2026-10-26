@@ -1,23 +1,26 @@
 #include <ul/man/man_Manager.hpp>
 #include <ul/ul_Include.hpp>
 #include <ul/fs/fs_Stdio.hpp>
+#include <ul/ul_HomeMenuSwitch.hpp>
 
 namespace ul::man {
 
     bool IsBasePresent() {
-        return fs::ExistsDirectory(BaseSystemPath);
+        return homemenu::HasBackup();
     }
 
+    // steamui: only uLaunch's exefs.nsp is added/removed (upstream deleted the whole contents folder,
+    // which also erased any NXTheme installed there)
     bool IsSystemActive() {
-        return fs::ExistsDirectory(ActiveSystemPath);
+        return homemenu::IsActive();
     }
 
     void ActivateSystem() {
-        fs::CopyDirectory(BaseSystemPath, ActiveSystemPath);
+        homemenu::Activate();
     }
 
     void DeactivateSystem() {
-        fs::DeleteDirectory(ActiveSystemPath);
+        homemenu::Deactivate();
     }
 
     std::string Version::AsString() const {

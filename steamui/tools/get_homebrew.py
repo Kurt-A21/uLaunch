@@ -16,9 +16,12 @@ import argparse, io, json, os, re, sys, urllib.request, zipfile
 from pathlib import Path, PurePosixPath
 
 API = os.environ.get("STEAMUI_GITHUB_API", "https://api.github.com")
+WEB = os.environ.get("STEAMUI_GITHUB_WEB", "https://github.com")
 
-# kind: "nro" -> copied to dest; "zip_sd" -> zip extracted onto the SD root;
-#       "ovl" -> copied to switch/.overlays; "payload" -> copied to bootloader/payloads
+# kind: "nro" -> copied to dest; "zip_sd" -> zip extracted onto the SD root (dest, if given, is where a bare .nro
+#       at the zip's top level goes); "ovl" -> copied to switch/.overlays; "payload" -> copied to bootloader/payloads
+# first_only: stop after the first matching download. any_release: if the latest release lacks the file, use the
+# newest release that has it. source: (branch, folder, dest) -> that folder of the repo's source zip is copied to dest.
 PACKAGES = [
     # --- core (CFW itself) ---
     dict(key="atmosphere", group="core", repo="Atmosphere-NX/Atmosphere", desc="Atmosphere CFW",
@@ -42,6 +45,12 @@ PACKAGES = [
          files=[(r"^(sdout|Ultrahand.*)\.zip$", "zip_sd", None)]),
     dict(key="statusmonitor", group="apps", repo="masagrator/Status-Monitor-Overlay", desc="Status Monitor: temps/clocks overlay",
          files=[(r"^Status-Monitor-Overlay.*\.zip$", "zip_sd", None), (r"^Status-Monitor-Overlay\.ovl$", "ovl", None)]),
+    dict(key="sphaira", group="apps", repo="ITotalJustice/sphaira", desc="sphaira: homebrew menu (+ Themezer theme browser, file browser)", first_only=True,
+         files=[(r"^sphaira.*\.zip$", "zip_sd", "switch/sphaira/sphaira.nro"), (r"^sphaira\.nro$", "nro", "switch/sphaira/sphaira.nro")]),
+    dict(key="nxthemes", group="apps", repo="exelix11/SwitchThemeInjector", desc="NXThemes Installer: themes for Nintendo's HOME menu", any_release=True,
+         files=[(r"^NXThemesInstaller.*\.nro$", "nro", "switch/NXThemesInstaller/NXThemesInstaller.nro")]),
+    dict(key="themepatches", group="apps", repo="exelix11/theme-patches", desc="Theme patches for NXThemes (it can't download them on an offline emuMMC)",
+         source=("master", "systemPatches", "themes/systemPatches")),
     # --- optional ---
     dict(key="missioncontrol", group="optional", repo="ndeadly/MissionControl", desc="MissionControl: PS4/PS5/Xbox controllers over Bluetooth",
          files=[(r"^MissionControl-.*\.zip$", "zip_sd", None)]),
@@ -62,11 +71,18 @@ def http_bytes(url):
         return r.read()
 
 
-def safe_extract(data, sd: Path, dry):
+def safe_extract(data, sd: Path, dry, nro_dest=None):
     """Extract a release zip onto the SD root, refusing anything outside the usual SD folders."""
     z = zipfile.ZipFile(io.BytesIO(data))
     names = [n for n in z.namelist() if not n.endswith("/")]
-    # Some zips wrap everything in one folder (e.g. "SdOut/"): strip it if the next level looks like an SD root
+    # A zip holding just the app (e.g. "sphaira.nro" at the top) -> put it where the package says
+    if nro_dest and all(len(PurePosixPath(n).parts) == 1 for n in names):
+        nros = [n for n in names if n.lower().endswith(".nro")]
+        if len(nros) == 1:
+            if not dry:
+                (sd / nro_dest).parent.mkdir(parents=True, exist_ok=True)
+                (sd / nro_dest).write_bytes(z.read(nros[0]))
+            return [sd / nro_dest]
     tops = {PurePosixPath(n).parts[0] for n in names}
     strip = 0
     if len(tops) == 1 and not (tops & SAFE_TOP_LEVEL):
@@ -96,21 +112,61 @@ def safe_extract(data, sd: Path, dry):
     return written
 
 
-def install(pkg, sd: Path, dry):
-    rel = http_json(f"{API}/repos/{pkg['repo']}/releases/latest")
-    assets = rel.get("assets", [])
-    print(f"  {pkg['desc']}  [{rel.get('tag_name', '?')}]")
-    done = 0
-    for pattern, kind, dest in pkg["files"]:
-        asset = next((a for a in assets if re.match(pattern, a["name"], re.I)), None)
-        if asset is None:
+def install_source_folder(pkg, sd: Path, dry):
+    """Copies one folder of a repo's source zip (e.g. theme-patches' systemPatches) to the SD card."""
+    branch, folder, dest = pkg["source"]
+    print(f"  {pkg['desc']}  [{branch}]")
+    if dry:
+        print(f"      would copy {folder}/ from {pkg['repo']} -> {dest}/")
+        return True
+    z = zipfile.ZipFile(io.BytesIO(http_bytes(f"{WEB}/{pkg['repo']}/archive/refs/heads/{branch}.zip")))
+    n = 0
+    for name in z.namelist():
+        parts = PurePosixPath(name).parts
+        if name.endswith("/") or len(parts) < 3 or parts[1] != folder or ".." in parts:
             continue
+        dst = sd.joinpath(*PurePosixPath(dest).parts, *parts[2:])
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(z.read(name))
+        n += 1
+    print(f"      copied {n} files -> {dest}/")
+    return n > 0
+
+
+def pick_assets(pkg):
+    """[(pattern, kind, dest, asset, tag)] for each file the package wants, from the latest release
+    (or, with any_release, the newest release that has it)."""
+    latest = http_json(f"{API}/repos/{pkg['repo']}/releases/latest")
+    picks = []
+    for pattern, kind, dest in pkg["files"]:
+        asset = next((a for a in latest.get("assets", []) if re.match(pattern, a["name"], re.I)), None)
+        tag = latest.get("tag_name", "?")
+        if asset is None and pkg.get("any_release"):
+            for rel in http_json(f"{API}/repos/{pkg['repo']}/releases?per_page=20"):
+                if rel.get("draft") or rel.get("prerelease"):
+                    continue
+                asset = next((a for a in rel.get("assets", []) if re.match(pattern, a["name"], re.I)), None)
+                if asset is not None:
+                    tag = rel.get("tag_name", "?")
+                    break
+        if asset is not None:
+            picks.append((pattern, kind, dest, asset, tag))
+    return picks
+
+
+def install(pkg, sd: Path, dry):
+    if "source" in pkg:
+        return install_source_folder(pkg, sd, dry)
+    picks = pick_assets(pkg)
+    print(f"  {pkg['desc']}  [{', '.join(sorted({p[4] for p in picks})) or '?'}]")
+    done = 0
+    for pattern, kind, dest, asset, tag in picks:
         data = b"" if dry else http_bytes(asset["browser_download_url"])
         if kind == "zip_sd":
             if dry:
                 print(f"      would extract {asset['name']} onto the SD card")
             else:
-                n = len(safe_extract(data, sd, dry))
+                n = len(safe_extract(data, sd, dry, nro_dest=dest))
                 print(f"      extracted {asset['name']} ({n} files)")
         else:
             if kind == "ovl":
@@ -121,8 +177,8 @@ def install(pkg, sd: Path, dry):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(data)
         done += 1
-        if kind in ("zip_sd",) and pkg["key"] == "statusmonitor":
-            break  # zip already contains the .ovl
+        if (kind == "zip_sd" and pkg["key"] == "statusmonitor") or pkg.get("first_only"):
+            break  # e.g. the zip already contains the .ovl / the app
     if done == 0:
         print(f"      !! no matching download found - get it manually from https://github.com/{pkg['repo']}/releases")
     return done > 0
@@ -167,6 +223,9 @@ def main():
             failed.append(p["key"])
     print()
     print("Done." if not failed else f"Done, but these need attention: {', '.join(failed)}")
+    if any(p["key"] in ("nxthemes", "themepatches") for p in pkgs):
+        print("NXThemes: themes go in themes/ on the SD card. They show on Nintendo's HOME menu, i.e. after switching")
+        print("  steamui off (burger menu -> Themes -> Nintendo HOME menu). uManager -> Activate brings steamui back.")
     if any(p["key"] == "missioncontrol" for p in pkgs):
         print("MissionControl: if the console won't boot after an Atmosphere update, delete atmosphere/contents/010000000000BD00")
 
