@@ -1,5 +1,6 @@
 #include <ul/menu/ui/ui_MainMenuLayout.hpp>
 #include <ul/menu/menu_HomebrewSync.hpp>
+#include <ul/menu/menu_LaunchLog.hpp>
 #include <ul/menu/ui/ui_MenuApplication.hpp>
 #include <ul/fs/fs_Stdio.hpp>
 #include <ul/menu/menu_Cache.hpp>
@@ -236,6 +237,7 @@ namespace ul::menu::ui {
                             }
                             else {
                                 this->hover_media->StopSound();
+                                RecordLaunch(HoverMedia::MakeApplicationKey(cur_entry.app_info.app_id));
                                 this->entry_menu->PlayPressAnimation();
                                 this->haptics.Play(Haptics::Kind::Press);
                                 pu::audio::PlaySfx(this->launch_app_sfx);
@@ -630,6 +632,10 @@ namespace ul::menu::ui {
     }
 
     void MainMenuLayout::LaunchHomebrewApplication(const Entry &hb_entry) {
+        // steamui: stop the hover preview and note the launch (matches captures to games)
+        this->hover_media->StopSound();
+        RecordLaunch(HoverMedia::MakeHomebrewKey(hb_entry.hb_info.nro_target.nro_path));
+
         // Take care if there is a suspended app
         auto do_launch = true;
         if(g_GlobalSettings.IsSuspended()) {
@@ -1187,6 +1193,8 @@ namespace ul::menu::ui {
 
         const auto option = g_MenuApplication->DisplayDialog(GetLanguageString("hb_launch"), GetLanguageString("hb_launch_conf"), { GetLanguageString("hb_applet"), GetLanguageString("hb_app"), GetLanguageString("cancel") }, true);
         if(option == 0) {
+            this->hover_media->StopSound();
+            RecordLaunch(HoverMedia::MakeHomebrewKey(hb_entry.hb_info.nro_target.nro_path));
             pu::audio::PlaySfx(this->launch_hb_sfx);
             
             const auto proper_ipt = CreateLaunchTargetInput(hb_entry.hb_info.nro_target);

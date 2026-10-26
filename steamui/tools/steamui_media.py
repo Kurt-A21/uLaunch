@@ -133,15 +133,44 @@ def capture_time(v: Path):
 
 def convert_clip(src: Path, dst: Path):
     fade_start = MAX_SOUND_SECONDS - 2
-    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-vn", "-t", str(MAX_SOUND_SECONDS),
+    cmd = ["ffmpeg", "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-vn", "-t", str(MAX_SOUND_SECONDS),
            "-af", f"loudnorm=I=-18:TP=-2,afade=t=out:st={fade_start}:d=2", "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(dst)]
     try:
-        subprocess.run(cmd, check=True)
+        # stdin closed: otherwise ffmpeg reads the keyboard and swallows the answers to sync's prompts
+        subprocess.run(cmd, check=True, stdin=subprocess.DEVNULL)
         return True
     except FileNotFoundError:
         sys.exit("ffmpeg is not installed (macOS: brew install ffmpeg)")
     except subprocess.CalledProcessError:
         return False
+
+
+def read_launch_log(sd: Path):
+    """[(YYYYMMDDHHMMSS, key)] written by the steamui home menu each time a game/homebrew is launched."""
+    out = []
+    for name in ("launches.old.txt", "launches.txt"):
+        f = sd / "ulaunch/steamui" / name
+        if f.exists():
+            for line in f.read_text(errors="ignore").splitlines():
+                parts = line.split()
+                if len(parts) == 2 and re.fullmatch(r"\d{14}", parts[0]):
+                    out.append((parts[0], parts[1]))
+    return sorted(out)
+
+
+def game_for_capture(launches, capture_name, max_hours=6):
+    """The game launched most recently before the capture (album files are named by local capture time)."""
+    m = re.match(r"(\d{14})", capture_name)
+    if not m:
+        return None
+    ts = m.group(1)
+    before = [k for t, k in launches if t <= ts]
+    if not before:
+        return None
+    last_t = max(t for t, _ in launches if t <= ts)
+    from datetime import datetime
+    gap = datetime.strptime(ts, "%Y%m%d%H%M%S") - datetime.strptime(last_t, "%Y%m%d%H%M%S")
+    return before[-1] if gap.total_seconds() <= max_hours * 3600 else None
 
 
 def cmd_sync(sd: Path, ask=input):
@@ -161,14 +190,42 @@ def cmd_sync(sd: Path, ask=input):
         # saved after every answer, so an interrupted run never redoes work
         done_file.write_text("\n".join(sorted(done)) + ("\n" if done else ""))
 
-    new_vids = [v for v in album_videos(sd) if v.name not in done]
+    new_vids = sorted((v for v in album_videos(sd) if v.name not in done), key=lambda v: v.name)  # oldest first
     missing = [k for k in names if not (sound_dir / f"{k}.wav").exists()]
     if not new_vids:
         print("  No new video captures. On a game's title screen, hold Capture to save the last 30 s, then run sync again.")
+
+    # Automatic: the home menu logs every launch, so a capture belongs to the game launched just before it.
+    # The first capture after launching a game without a soundtrack becomes its soundtrack.
+    launches = read_launch_log(sd)
+    unmatched = []
     for v in new_vids:
-        if not missing:
-            print("  Every game already has a soundtrack.")
-            break
+        key = game_for_capture(launches, v.name)
+        if key is None:
+            unmatched.append(v)
+            continue
+        label = names.get(key, key)
+        if (sound_dir / f"{key}.wav").exists():
+            print(f"  skip  {v.name}: {label} already has its soundtrack")
+            done.add(v.name)
+            save_done()
+            continue
+        if convert_clip(v, sound_dir / f"{key}.wav"):
+            print(f"  auto  {v.name} -> {label}")
+            if key in missing:
+                missing.remove(key)
+            done.add(v.name)
+            save_done()
+        else:
+            print(f"  fail  {v.name}: ffmpeg could not read this video")
+    if unmatched and missing:
+        print(f"  {len(unmatched)} capture(s) couldn't be matched automatically (taken before the menu logged a launch,")
+        print("  or hours after it). Tell me which game each one is:")
+    new_vids = sorted(unmatched, key=lambda v: v.name, reverse=True)
+    if not missing:
+        print("  Every game already has a soundtrack.")
+        new_vids = []
+    for v in new_vids:
         print(f"\n  Capture {v.name}  ({capture_time(v)})")
         for i, k in enumerate(missing, 1):
             print(f"    {i:2}. {names[k]}")

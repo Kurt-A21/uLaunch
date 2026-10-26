@@ -21,5 +21,10 @@ echo "### Homebrew auto-add"
 $CXX "${F[@]}" -Werror -fsanitize=address,undefined -include algorithm "$T/test_hb.cpp" "$SRC/source/ul/menu/menu_HomebrewSync.cpp" -o "$OUT/test_hb"
 (mkdir -p "$OUT/r3" && cd "$OUT/r3" && "$OUT/test_hb")
 
+echo "### Launch log (capture -> game matching)"
+$CXX "${F[@]}" -Werror -fsanitize=address,undefined -c "$SRC/source/ul/menu/menu_LaunchLog.cpp" -o "$OUT/ll.o"
+$CXX "${F[@]}" -fsanitize=address,undefined "$T/test_launchlog.cpp" "$OUT/ll.o" -o "$OUT/test_launchlog"
+(mkdir -p "$OUT/r4" && cd "$OUT/r4" && "$OUT/test_launchlog")
+
 echo "### Theme"
 python3 "$ROOT/steamui/tools/validate_theme.py" "$ROOT/steamui/DeckNight.ultheme" "$ROOT" | tail -1
