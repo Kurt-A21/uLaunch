@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <cstdio>
 #include <cstring>
+#include <strings.h>
 #include <set>
 #include <vector>
 

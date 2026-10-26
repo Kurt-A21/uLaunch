@@ -86,6 +86,37 @@ These keys are new in this fork:
 - `main_menu.haptics.enabled`: HD Rumble ticks on/off.
 - `quick_menu.quick_menu.slide_down`: `true` turns the quick menu into a dropdown. Related keys: `width`, `item_height`, `items_to_show`, `dim_alpha`.
 
+## Essential homebrew apps
+
+`get_homebrew.py` downloads the latest official releases straight from each project's GitHub page and puts them on the SD card. It never deletes anything, and it keeps your `hekate_ipl.ini`.
+
+```
+python3 get_homebrew.py --list
+python3 get_homebrew.py /Volumes/SWITCH --dry-run       # preview
+python3 get_homebrew.py /Volumes/SWITCH                 # Atmosphere, hekate, sys-clk + the apps below
+python3 get_homebrew.py /Volumes/SWITCH --with-missioncontrol
+```
+
+| App | What it's for |
+|---|---|
+| JKSV | Back up and restore save data. Do this before anything risky. |
+| NX-Shell | File manager |
+| ftpd | Copy files over Wi-Fi |
+| Moonlight | Stream games from your PC (e.g. your PC copy of Metal Gear Rising) |
+| Homebrew App Store | Browse and update homebrew |
+| Ultrahand | Overlay menu (L + D-pad Down + right stick), hosting the sys-clk and Status Monitor overlays |
+| Status Monitor | Live temperatures and clocks while overclocking |
+| MissionControl (optional) | Use PS4/PS5/Xbox controllers over Bluetooth |
+
+All of them show up on the home screen automatically.
+
+## Tests
+
+`steamui/tests/run_tests.sh` runs on any Linux or Mac with g++/clang and Python + Pillow. GitHub runs it on every push. It covers:
+- The hover art/sound logic, with memory and thread sanitizers.
+- Homebrew auto-adding.
+- `validate_theme.py`, which checks the theme against the menu code and checks the screen layout.
+
 ## Building
 
 GitHub Actions builds everything on each push, using `.github/workflows/main.yml`. Download the `SdOut` artifact from the run.

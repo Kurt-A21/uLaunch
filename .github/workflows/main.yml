@@ -36,7 +36,7 @@ jobs:
         mkdir -p SdOut/ulaunch/themes SdOut/ulaunch/steamui/bg SdOut/ulaunch/steamui/sound
         cp steamui/DeckNight.ultheme SdOut/ulaunch/themes/
         cp steamui/README_STEAMUI.md SdOut/
-        cp steamui/tools/steamui_media.py SdOut/
+        cp steamui/tools/steamui_media.py steamui/tools/get_homebrew.py SdOut/
         zip -r SdOut.zip SdOut
         
     - uses: actions/upload-artifact@master
@@ -44,3 +44,12 @@ jobs:
         name: SdOut
         path: SdOut.zip
         if-no-files-found: error
+
+  steamui-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Install test dependencies
+      run: python3 -m pip install pillow
+    - name: Run steamui tests (sanitizers + theme validation)
+      run: bash steamui/tests/run_tests.sh

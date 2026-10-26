@@ -254,8 +254,13 @@ namespace ul::menu::ui {
         }
 
         if(got_sound) {
-            if(this->sound_waiting && (sound_key == this->target_key) && (sound_chunk != nullptr)) {
+            const auto is_for_target = this->sound_waiting && (sound_key == this->target_key);
+            if(is_for_target) {
+                // Also clears the wait when this game has no sound file, so the menu music comes back
                 this->sound_waiting = false;
+            }
+
+            if(is_for_target && (sound_chunk != nullptr)) {
                 this->PlaySoundChunk(sound_chunk);
             }
             else if(sound_chunk != nullptr) {
