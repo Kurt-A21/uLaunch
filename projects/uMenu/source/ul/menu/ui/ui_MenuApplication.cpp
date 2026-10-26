@@ -278,6 +278,7 @@ namespace ul::menu::ui {
                 break;
             }
             case MenuType::Lockscreen: {
+                this->lockscreen_menu_lyt->Prepare();
                 this->LoadLayout(this->lockscreen_menu_lyt);
                 break;
             }

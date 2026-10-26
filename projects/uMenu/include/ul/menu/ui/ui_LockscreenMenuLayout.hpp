@@ -1,6 +1,9 @@
 
 #pragma once
 #include <ul/menu/ui/ui_IMenuLayout.hpp>
+#include <ul/menu/ui/ui_HoverMedia.hpp>
+#include <ul/menu/ui/ui_ResumeCard.hpp>
+#include <ul/menu/ui/ui_Haptics.hpp>
 
 namespace ul::menu::ui {
 
@@ -13,10 +16,21 @@ namespace ul::menu::ui {
             pu::ui::elm::TextBlock::Ref battery_text;
             pu::ui::elm::Image::Ref battery_top_icon;
             pu::ui::elm::Image::Ref battery_charging_top_icon;
+            // steamui: show the suspended game and resume it straight from the lock screen
+            bool resume_mode;
+            bool resuming;
+            HoverMedia::Ref game_art;
+            ResumeCard::Ref resume_card;
+            Haptics haptics;
+            pu::audio::Sfx resume_sfx;
+            void RefreshResumeCard();
+            void StartResume();
 
         public:
             LockscreenMenuLayout();
             PU_SMART_CTOR(LockscreenMenuLayout)
+            // Called when the lock screen is about to be shown (picks up the current suspended game)
+            void Prepare();
             
             void OnMenuInput(const u64 keys_down, const u64 keys_up, const u64 keys_held, const pu::ui::TouchPoint touch_pos) override;
             bool OnHomeButtonPress() override;

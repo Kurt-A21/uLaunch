@@ -225,6 +225,16 @@ ui["main_menu"] = {
 # Profile picker: big avatars in a row (steamui UserCarousel); the old list stays configured as fallback
 ui["startup_menu"]["info_text"] = {"y": 190, "h_align": "center", "font_size": "large"}
 ui["startup_menu"]["user_carousel"] = {"enabled": True, "y": 540, "avatar_size": 256, "spacing": 340}
+# Lock screen: big centred clock + date, status top-right, "Resume <game>" card over the suspended game
+ui["lockscreen_menu"] = {
+    "info_text": {"h_align": "center", "v_align": "center", "font_size": "large"},
+    "time_text": {"y": 120, "h_align": "center", "font_size": "large"},
+    "date_text": {"y": 196, "h_align": "center", "font_size": "medium"},
+    "connection_top_icon": {"x": 1640, "y": 48},
+    "battery_top_icon": {"x": 1710, "y": 48},
+    "battery_text": {"x": 1776, "y": 58, "font_size": "small"},
+    "resume_card": {"enabled": True, "y": 760},
+}
 ui["quick_menu"] = {"quick_menu": {"x": 1480, "y": 140, "width": 380, "item_height": 80, "items_to_show": 10, "slide_down": True, "dim_alpha": 110}}
 json.dump(ui, open(p("ui", "UI.json"), "w"), indent=4)
 
@@ -257,6 +267,9 @@ wav(p("sound", "Main", "OpenQuickMenu.wav"), tone(np.linspace(500, 1100, int(.22
 wav(p("sound", "Main", "CloseQuickMenu.wav"), tone(np.linspace(1100, 500, int(.22 * SR)), .22, 12, .25))
 la = sum(tone(f, .7, 5, .16) for f in (523.25, 659.25, 783.99)); hi = sum(tone(f, .62, 5, .14) for f in (1046.5, 1318.5)); la[int(.08 * SR):int(.08 * SR) + len(hi)] += hi[:len(la) - int(.08 * SR)]
 wav(p("sound", "Main", "LaunchApplication.wav"), la)
+# Resume (lock screen / home): quick rising two-note chime
+rs = tone(659.25, .45, 7, .16); hi2 = tone(987.77, .38, 7, .15); rs[int(.09 * SR):int(.09 * SR) + len(hi2)] += hi2[:len(rs) - int(.09 * SR)]
+wav(p("sound", "Main", "ResumeApplication.wav"), rs)
 
 # Ambient menu music (gets ducked while a game preview plays)
 dur = 48.0; n = int(dur * SR); t = np.arange(n) / SR

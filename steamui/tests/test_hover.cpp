@@ -62,6 +62,10 @@ static void scenario(bool threaded){
     const char *keys[] = { "GAMEA", "GAMEB", "GAMEC", "GAMED", "GAMEE", "GAMEF", "", "hb-app" };
     for(int i = 0; i < 300; i++){ m->SetTarget(keys[(i * 7 + i / 3) % 8]); frames(m, (i % 5) * 9); }
     frames(m, 1200);
+    // Lock-screen mode: art only, never the soundtrack
+    m->SetSoundEnabled(false); m->SetTarget("GAMEA"); frames(m, 900);
+    CHECK(SimPlayingChunkId() == 0 && top_id() == bg_id("GAMEA"), "art-only mode (lock screen) shows art without playing sound");
+    m->SetSoundEnabled(true);
     m->SetTarget("GAMEF"); frames(m, 300); m->StopSound();
     CHECK(SimMusicVolume() == vol0, "StopSound restores music volume");
     m.reset();

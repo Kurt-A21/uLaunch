@@ -140,6 +140,17 @@ def main():
         (ok if uc["spacing"] > peak else fail)(f"neighbouring avatars don't overlap the focused one ({uc['spacing']}px apart vs {peak:.0f}px wide)")
         (ok if (W - uc["spacing"]) / 2 > 0 else fail)("at least 3 profiles visible at once")
 
+    lm = ui.get("lockscreen_menu", {})
+    rc = lm.get("resume_card")
+    if rc and rc.get("enabled"):
+        print("== Lock screen geometry (mirrors ResumeCard) ==")
+        cw, ch = 820, 160
+        cx = rc.get("x", (W - cw) // 2); cy = rc["y"]
+        (ok if 0 <= cx and cx + cw <= W else fail)(f"resume card {cw}x{ch} at x={cx} fits horizontally")
+        (ok if cy + ch + 26 + 30 <= H else fail)(f"card + 'press any button' hint end at y~{cy + ch + 56} (screen {H})")
+        (ok if lm["date_text"]["y"] + 40 < cy - 24 else fail)(f"clock/date (to y~{lm['date_text']['y'] + 40}) stay above the card (y={cy})")
+        (ok if "sound/Main/ResumeApplication.wav" in names or (default / "sound/Main/ResumeApplication.wav").exists() else warn)("a resume sound exists (theme or built-in default)")
+
     print()
     print(f"{'PASSED' if not fails else 'FAILED'}: {len(fails)} failure(s), {len(warns)} warning(s)")
     sys.exit(1 if fails else 0)

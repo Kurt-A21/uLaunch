@@ -41,7 +41,7 @@ namespace ul::menu::ui {
 
     }
 
-    HoverMedia::HoverMedia() : Element(), worker_thread(), worker_running(false), worker_lock(), worker_cv(), worker_exit(false), req_bg_key(), req_sound_key(), res_bg_ready(false), res_bg_key(), res_bg_surface(nullptr), res_sound_ready(false), res_sound_key(), res_sound_chunk(nullptr), target_key(), target_tp(), bg_pending(false), bg_waiting(false), sound_pending(false), sound_waiting(false), bg_cache(), cur_bg(), cur_bg_alpha(0), cur_bg_zoom(1.0), prev_bg(), prev_bg_alpha(0), prev_bg_zoom(1.0), cur_sound(nullptr), cur_sound_channel(-1), fading_sounds(), music_ducked(false), saved_music_volume(MIX_MAX_VOLUME) {
+    HoverMedia::HoverMedia() : Element(), worker_thread(), worker_running(false), worker_lock(), worker_cv(), worker_exit(false), req_bg_key(), req_sound_key(), res_bg_ready(false), res_bg_key(), res_bg_surface(nullptr), res_sound_ready(false), res_sound_key(), res_sound_chunk(nullptr), target_key(), target_tp(), bg_pending(false), bg_waiting(false), sound_pending(false), sound_waiting(false), bg_cache(), cur_bg(), cur_bg_alpha(0), cur_bg_zoom(1.0), prev_bg(), prev_bg_alpha(0), prev_bg_zoom(1.0), cur_sound(nullptr), cur_sound_channel(-1), fading_sounds(), music_ducked(false), saved_music_volume(MIX_MAX_VOLUME), sound_enabled(true) {
         mutexInit(&this->worker_lock);
         condvarInit(&this->worker_cv);
 
@@ -159,7 +159,7 @@ namespace ul::menu::ui {
         this->target_tp = std::chrono::steady_clock::now();
         this->bg_pending = true;
         this->bg_waiting = false;
-        this->sound_pending = !key.empty();
+        this->sound_pending = !key.empty() && this->sound_enabled;
         this->sound_waiting = false;
 
         // The previous game's sound always fades out right away

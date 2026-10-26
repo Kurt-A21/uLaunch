@@ -93,6 +93,7 @@ namespace ul::menu::ui {
             std::vector<FadingSound> fading_sounds;
             bool music_ducked;
             s32 saved_music_volume;
+            bool sound_enabled;
 
             static void WorkerMain(void *arg);
             void WorkerLoop();
@@ -135,6 +136,14 @@ namespace ul::menu::ui {
 
             // Immediately stops the preview sound (e.g. when launching a game or leaving the menu)
             void StopSound();
+
+            // Art only, no soundtrack preview (e.g. on the lock screen)
+            inline void SetSoundEnabled(const bool enabled) {
+                this->sound_enabled = enabled;
+                if(!enabled) {
+                    this->StopSound();
+                }
+            }
 
             void OnRender(pu::ui::render::Renderer::Ref &drawer, const s32 x, const s32 y) override;
             void OnInput(const u64 keys_down, const u64 keys_up, const u64 keys_held, const pu::ui::TouchPoint touch_pos) override {}
