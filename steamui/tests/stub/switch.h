@@ -24,3 +24,27 @@ inline Result threadCreate(Thread *t, ThreadFunc f, void *a, void*, size_t, int,
 inline Result threadStart(Thread *t){ return pthread_create(&t->t, nullptr, _thr_tramp, t); }
 inline Result threadWaitForExit(Thread *t){ return pthread_join(t->t, nullptr); }
 inline Result threadClose(Thread*){ return 0; }
+
+#ifndef BITL
+#define BITL(n) (1ULL << (n))
+#endif
+#define HidNpadButton_A (1ULL << 0)
+#define HidNpadButton_B (1ULL << 1)
+#define HidNpadButton_X (1ULL << 2)
+#define HidNpadButton_Y (1ULL << 3)
+#define HidNpadButton_StickL (1ULL << 4)
+#define HidNpadButton_StickR (1ULL << 5)
+#define HidNpadButton_L (1ULL << 6)
+#define HidNpadButton_R (1ULL << 7)
+#define HidNpadButton_ZL (1ULL << 8)
+#define HidNpadButton_ZR (1ULL << 9)
+#define HidNpadButton_Plus (1ULL << 10)
+#define HidNpadButton_Minus (1ULL << 11)
+#define HidNpadButton_Left (1ULL << 12)
+#define HidNpadButton_Up (1ULL << 13)
+#define HidNpadButton_Right (1ULL << 14)
+#define HidNpadButton_Down (1ULL << 15)
+#define HidNpadButton_StickLLeft (1ULL << 16)
+#define HidNpadButton_StickLRight (1ULL << 18)
+#define HidNpadButton_StickRLeft (1ULL << 20)
+#define HidNpadButton_StickRRight (1ULL << 22)

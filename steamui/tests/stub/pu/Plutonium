@@ -12,7 +12,23 @@ namespace pu::ui {
     enum class DefaultFontSize : u32 { Small, Medium, MediumLarge, Large, Count };
     inline std::string GetDefaultFont(const DefaultFontSize) { return "font"; }
 }
+#ifndef BITL
+#define BITL(n) (1ULL << (n))
+#endif
 #define HidNpadButton_A (1ULL << 0)
+#define HidNpadButton_B (1ULL << 1)
+#define HidNpadButton_X (1ULL << 2)
+#define HidNpadButton_Y (1ULL << 3)
+#define HidNpadButton_StickL (1ULL << 4)
+#define HidNpadButton_StickR (1ULL << 5)
+#define HidNpadButton_L (1ULL << 6)
+#define HidNpadButton_R (1ULL << 7)
+#define HidNpadButton_ZL (1ULL << 8)
+#define HidNpadButton_ZR (1ULL << 9)
+#define HidNpadButton_Plus (1ULL << 10)
+#define HidNpadButton_Minus (1ULL << 11)
+#define HidNpadButton_Up (1ULL << 13)
+#define HidNpadButton_Down (1ULL << 15)
 #define HidNpadButton_Left (1ULL << 12)
 #define HidNpadButton_Right (1ULL << 14)
 #define HidNpadButton_StickLLeft (1ULL << 16)
@@ -31,9 +47,12 @@ namespace pu::ui::render {
     struct DrawCall { int tex_id; int alpha; int x, y, w, h; };
     struct Renderer { std::vector<DrawCall> calls; PU_SMART_CTOR(Renderer) void RenderTexture(sdl2::Texture t, s32 x, s32 y, TextureRenderOptions o){ calls.push_back({t ? t->id : -1, o.alpha, x, y, o.w, o.h}); }
         void RenderRoundedRectangleFill(Color c, s32 x, s32 y, s32 w, s32 h, s32){ calls.push_back({-2, c.a, x, y, w, h}); }
-        void RenderRectangleFill(Color c, s32 x, s32 y, s32 w, s32 h){ calls.push_back({-3, c.a, x, y, w, h}); } };
+        void RenderRectangleFill(Color c, s32 x, s32 y, s32 w, s32 h){ calls.push_back({-3, c.a, x, y, w, h}); }
+        void RenderCircle(Color c, s32 x, s32 y, s32 r){ calls.push_back({-4, c.a, x, y, r, r}); }
+        void RenderCircleFill(Color c, s32 x, s32 y, s32 r){ calls.push_back({-5, c.a, x, y, r, r}); } };
     sdl2::Texture RenderText(const std::string &font, const std::string &text, const Color clr, const u32 = 0, const u32 = 0);
     s32 GetTextureWidth(sdl2::Texture t);
+    s32 GetTextureHeight(sdl2::Texture t);
     sdl2::Texture ConvertToTexture(SDL_Surface *s);
 }
 namespace pu::ui::elm { class Element { public: virtual ~Element(){} virtual s32 GetX()=0; virtual s32 GetY()=0; virtual s32 GetWidth()=0; virtual s32 GetHeight()=0; virtual void OnRender(render::Renderer::Ref &d, const s32 x, const s32 y)=0; virtual void OnInput(const u64, const u64, const u64, const TouchPoint)=0; }; }

@@ -34,11 +34,11 @@ namespace ul::menu::ui {
             // Load lockscreen, if enabled
             bool lockscreen_enabled;
             UL_ASSERT_TRUE(g_GlobalSettings.config.GetEntry(cfg::ConfigEntryId::LockscreenEnabled, lockscreen_enabled));
-            // steamui: a theme with the resume card shows it whenever a game is waiting, even if the
-            // classic lock screen is turned off in settings (that's the quickest way back into the game)
-            util::JSON resume_card_json;
-            const auto theme_resume_card = TryGetUiElement("lockscreen_menu", "resume_card", resume_card_json) && resume_card_json.value("enabled", false);
-            if(lockscreen_enabled || (theme_resume_card && g_GlobalSettings.IsSuspended())) {
+            // steamui: a theme with the unlock prompt shows it whenever a game is waiting, even if the
+            // classic lock screen is turned off in settings (three presses take you straight back in)
+            util::JSON unlock_prompt_json;
+            const auto theme_unlock_prompt = TryGetUiElement("lockscreen_menu", "unlock_prompt", unlock_prompt_json) && unlock_prompt_json.value("enabled", false);
+            if(lockscreen_enabled || (theme_unlock_prompt && g_GlobalSettings.IsSuspended())) {
                 g_MenuApplication->LoadMenu(MenuType::Lockscreen, true);
             }
     

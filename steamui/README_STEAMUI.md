@@ -14,8 +14,13 @@ This is a fork of [uLaunch](https://github.com/XorTroll/uLaunch) 1.2.5. It repla
 - **Homebrew on the home screen.** Every app in `switch/` (and its direct subfolders) is added to the row automatically, next to your games.
 - **Profile picker.** Big avatars in a row with the same glow and spring as the game row; the name fades in under the focused one and "Add user" is the last tile. D-pad/stick or touch: tap to focus, tap again to pick.
 - **Back into your game after sleep.**
-  - If the console sleeps while you're in a game, waking it goes straight back into the game, with no button taps.
-  - If it sleeps on the home screen while a game is suspended, the lock screen shows a **Resume** card over that game's frozen frame and art, with a big clock. Press any button, or tap the screen, and the frame fades up and the game resumes. HOME goes to the home screen instead.
+  - Sleeping mid-game: waking goes straight back into the game.
+  - Sleeping on the home screen with a game suspended: you get the Switch's own lock screen, with time and date top-left, status top-right, and "Press the same button three times to resume" in the middle, made more dynamic:
+    - The button you press pops up in a badge, and each press fills a dot with a springy pop, a click and a rumble tick.
+    - A different button shakes the dots and starts over.
+    - On the third press, a ring bursts out and the game's frozen frame fades up into the game.
+    - Three taps on the screen work too. HOME goes to the home screen instead.
+    - Behind it, the paused game's art and frame are dimmed, with "<game> · paused" at the bottom.
   - This works even if uLaunch's own lock screen setting is off.
 - **Burger menu (top right).** Tap it, or press ZL/ZR, and the old nav bar (Power, Controllers, Album, Web, User, Themes, Settings, Mii, amiibo) slides down as a list.
 
@@ -132,7 +137,7 @@ These keys are new in this fork:
 - `main_menu.burger_icon`: position of the burger button. Its image is `ui/Main/BurgerIcon.png`. Themes without that image show no button.
 - `main_menu.haptics.enabled`: HD Rumble ticks on/off.
 - `startup_menu.user_carousel`: `{"enabled": true, "y": 540, "avatar_size": 256, "spacing": 340}` turns the profile list into the avatar row. Without it, uLaunch's original list is used.
-- `lockscreen_menu.resume_card`: `{"enabled": true, "y": 760}` shows the Resume card after sleep whenever a game is suspended.
+- `lockscreen_menu.unlock_prompt`: `{"enabled": true, "y": 470, "presses": 3}` gives the dynamic press-to-unlock prompt, shown after sleep whenever a game is suspended.
 - `quick_menu.quick_menu.slide_down`: `true` turns the quick menu into a dropdown. Related keys: `width`, `item_height`, `items_to_show`, `dim_alpha`.
 
 ## Essential homebrew apps

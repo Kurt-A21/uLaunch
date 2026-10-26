@@ -141,15 +141,19 @@ def main():
         (ok if (W - uc["spacing"]) / 2 > 0 else fail)("at least 3 profiles visible at once")
 
     lm = ui.get("lockscreen_menu", {})
-    rc = lm.get("resume_card")
-    if rc and rc.get("enabled"):
-        print("== Lock screen geometry (mirrors ResumeCard) ==")
-        cw, ch = 820, 160
-        cx = rc.get("x", (W - cw) // 2); cy = rc["y"]
-        (ok if 0 <= cx and cx + cw <= W else fail)(f"resume card {cw}x{ch} at x={cx} fits horizontally")
-        (ok if cy + ch + 26 + 30 <= H else fail)(f"card + 'press any button' hint end at y~{cy + ch + 56} (screen {H})")
-        (ok if lm["date_text"]["y"] + 40 < cy - 24 else fail)(f"clock/date (to y~{lm['date_text']['y'] + 40}) stay above the card (y={cy})")
+    up = lm.get("unlock_prompt")
+    if up and up.get("enabled"):
+        print("== Lock screen geometry (mirrors UnlockPrompt) ==")
+        n = up.get("presses", 3)
+        (ok if 1 <= n <= 8 else fail)(f"{n} presses to unlock (1-8)")
+        py = up["y"]; dots_y = py + 78 + 64 + 56
+        burst_bottom = dots_y + 340
+        top_items = [lm[k]["y"] for k in ("time_text", "date_text", "connection_top_icon", "battery_top_icon") if k in lm and "y" in lm[k]]
+        (ok if top_items and max(top_items) + 80 < py else fail)(f"top bar (to y~{max(top_items) + 80 if top_items else '?'}) stays above the prompt (y={py})")
+        (ok if dots_y + 40 < H - 120 else fail)(f"dots (y~{dots_y}) clear the '<game> · paused' line (y={H - 120})")
+        (ok if (n - 1) * 64 + 2 * 28 < W else fail)("dots fit across the screen")
         (ok if "sound/Main/ResumeApplication.wav" in names or (default / "sound/Main/ResumeApplication.wav").exists() else warn)("a resume sound exists (theme or built-in default)")
+        (ok if "resume_card" not in lm else warn)("no leftover resume_card settings")
 
     print()
     print(f"{'PASSED' if not fails else 'FAILED'}: {len(fails)} failure(s), {len(warns)} warning(s)")

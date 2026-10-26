@@ -2,7 +2,7 @@
 #pragma once
 #include <ul/menu/ui/ui_IMenuLayout.hpp>
 #include <ul/menu/ui/ui_HoverMedia.hpp>
-#include <ul/menu/ui/ui_ResumeCard.hpp>
+#include <ul/menu/ui/ui_UnlockPrompt.hpp>
 #include <ul/menu/ui/ui_Haptics.hpp>
 
 namespace ul::menu::ui {
@@ -20,10 +20,13 @@ namespace ul::menu::ui {
             bool resume_mode;
             bool resuming;
             HoverMedia::Ref game_art;
-            ResumeCard::Ref resume_card;
+            UnlockPrompt::Ref unlock_prompt;
             Haptics haptics;
             pu::audio::Sfx resume_sfx;
-            void RefreshResumeCard();
+            pu::audio::Sfx press_sfx;
+            bool has_game;
+            void RefreshPrompt();
+            void OnUnlocked();
             void StartResume();
 
         public:

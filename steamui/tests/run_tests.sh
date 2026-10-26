@@ -31,6 +31,11 @@ $CXX "${F[@]}" -Werror -fsanitize=address,undefined -c "$SRC/source/ul/menu/ui/u
 $CXX "${F[@]}" -fsanitize=address,undefined "$T/test_carousel.cpp" "$OUT/uc.o" -o "$OUT/test_carousel"
 "$OUT/test_carousel"
 
+echo "### Lock screen: press the same button three times"
+$CXX "${F[@]}" -Werror -fsanitize=address,undefined -c "$SRC/source/ul/menu/ui/ui_UnlockPrompt.cpp" -o "$OUT/up.o"
+$CXX "${F[@]}" -fsanitize=address,undefined "$T/test_unlock.cpp" "$OUT/up.o" -o "$OUT/test_unlock"
+"$OUT/test_unlock"
+
 echo "### Burger-menu overclock presets == oc_profile.py presets"
 $CXX "${F[@]}" -Werror -D__SWITCH__ -c "$SRC/source/ul/menu/ui/ui_PerformancePresets.cpp" -o "$OUT/pp.o"
 $CXX "${F[@]}" -D__SWITCH__ "$T/test_presets.cpp" "$OUT/pp.o" -o "$OUT/test_presets"

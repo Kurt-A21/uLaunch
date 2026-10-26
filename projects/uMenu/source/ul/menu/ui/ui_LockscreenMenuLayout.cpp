@@ -2,6 +2,7 @@
 #include <ul/menu/ui/ui_MenuApplication.hpp>
 #include <ul/menu/ui/ui_BackgroundScreenCapture.hpp>
 #include <ul/menu/smi/smi_Commands.hpp>
+#include <ul/menu/ui/ui_AppName.hpp>
 
 extern ul::menu::ui::GlobalSettings g_GlobalSettings;
 extern ul::menu::ui::MenuApplication::Ref g_MenuApplication;
@@ -21,16 +22,24 @@ namespace ul::menu::ui {
 
     }
 
-    LockscreenMenuLayout::LockscreenMenuLayout() : IMenuLayout(), resume_mode(false), resuming(false), resume_sfx(nullptr) {
-        // steamui: resume card mode (theme opt-in). Art + frozen game frame go below everything else.
-        util::JSON card_json;
-        if(TryGetUiElement("lockscreen_menu", "resume_card", card_json) && card_json.value("enabled", false)) {
+    LockscreenMenuLayout::LockscreenMenuLayout() : IMenuLayout(), resume_mode(false), resuming(false), resume_sfx(nullptr), press_sfx(nullptr), has_game(false) {
+        // steamui: the original "press the same button three times" lock screen, made dynamic (theme opt-in).
+        // The suspended game's art and frozen frame sit dimmed behind everything.
+        util::JSON prompt_json;
+        if(TryGetUiElement("lockscreen_menu", "unlock_prompt", prompt_json) && prompt_json.value("enabled", false)) {
             this->resume_mode = true;
             this->game_art = HoverMedia::New();
             this->game_art->SetSoundEnabled(false);
             this->Add(this->game_art);
             this->Add(GetScreenCaptureBackground());
-            this->resume_card = ResumeCard::New(card_json.value("x", (static_cast<s32>(pu::ui::render::ScreenWidth) - ResumeCard::Width) / 2), card_json.value("y", 760));
+            this->unlock_prompt = UnlockPrompt::New(prompt_json.value("y", 470), prompt_json.value("presses", 3), g_MenuApplication->GetTextColor(), g_MenuApplication->GetMenuFocusColor(),
+                [&](const PressCounter::Result res) {
+                    pu::audio::PlaySfx(this->press_sfx);
+                    this->haptics.Play((res == PressCounter::Result::Restarted) ? Haptics::Kind::Thump : Haptics::Kind::Tick);
+                },
+                [&]() {
+                    this->OnUnlocked();
+                });
             util::JSON haptics_json;
             this->haptics.Initialize(TryGetUiElement("main_menu", "haptics", haptics_json) && haptics_json.value("enabled", false));
         }
@@ -65,18 +74,18 @@ namespace ul::menu::ui {
         this->Add(this->battery_charging_top_icon);
 
         if(this->resume_mode) {
-            this->Add(this->resume_card);
+            this->Add(this->unlock_prompt);
         }
     }
 
     void LockscreenMenuLayout::Prepare() {
         this->resuming = false;
         if(this->resume_mode) {
-            this->RefreshResumeCard();
+            this->RefreshPrompt();
         }
     }
 
-    void LockscreenMenuLayout::RefreshResumeCard() {
+    void LockscreenMenuLayout::RefreshPrompt() {
         // Which game was running when the console went to sleep?
         std::string name;
         std::string art_key;
@@ -85,7 +94,7 @@ namespace ul::menu::ui {
             const auto app_id = g_GlobalSettings.system_status.suspended_app_id;
             name = LoadApplicationName(app_id);
             if(name.empty()) {
-                name = "your game";
+                name = "Your game";
             }
             icon = LoadApplicationIconTexture(app_id);
             art_key = HoverMedia::MakeApplicationKey(app_id);
@@ -96,15 +105,25 @@ namespace ul::menu::ui {
             icon = TryFindLoadImageHandle("ui/Main/EntryIcon/DefaultHomebrew");
         }
 
-        this->resume_card->SetGame(icon, name, g_MenuApplication->GetTextColor());
+        this->has_game = !name.empty();
+        this->unlock_prompt->Reset(name, icon);
         this->game_art->SetTarget(art_key);
-        // Without a suspended game, keep the classic "press any key" text
-        this->info_text->SetVisible(!this->resume_card->HasGame());
+        // The prompt replaces uLaunch's plain "press any key" text
+        this->info_text->SetVisible(false);
+    }
+
+    void LockscreenMenuLayout::OnUnlocked() {
+        if(this->has_game && g_GlobalSettings.IsSuspended()) {
+            this->StartResume();
+        }
+        else {
+            this->haptics.Play(Haptics::Kind::Press);
+            UnlockScreen();
+        }
     }
 
     void LockscreenMenuLayout::StartResume() {
         this->resuming = true;
-        this->resume_card->Hide();
         this->game_art->StopSound();
         this->haptics.Play(Haptics::Kind::Press);
         pu::audio::PlaySfx(this->resume_sfx);
@@ -115,20 +134,9 @@ namespace ul::menu::ui {
     void LockscreenMenuLayout::OnMenuInput(const u64 keys_down, const u64 keys_up, const u64 keys_held, const pu::ui::TouchPoint touch_pos) {
         if(this->resume_mode) {
             this->haptics.Update();
-            // Keep the suspended game's frame dimmed behind the card (or fading in while resuming)
+            // Keep the suspended game's frame dimmed behind the prompt (or fading up while resuming).
+            // Presses are handled by the prompt itself (three of the same button).
             UpdateScreenCaptureBackground(true);
-            if(this->resuming) {
-                return;
-            }
-            if((keys_down != 0) || !touch_pos.IsEmpty()) {
-                if(this->resume_card->HasGame() && g_GlobalSettings.IsSuspended()) {
-                    this->StartResume();
-                }
-                else {
-                    UnlockScreen();
-                }
-                return;
-            }
         }
         else if(keys_down != 0) {
             UnlockScreen();
@@ -150,10 +158,12 @@ namespace ul::menu::ui {
 
     void LockscreenMenuLayout::LoadSfx() {
         this->resume_sfx = pu::audio::LoadSfx(TryGetActiveThemeResource("sound/Main/ResumeApplication.wav"));
+        this->press_sfx = pu::audio::LoadSfx(TryGetActiveThemeResource("sound/Main/CursorMove.wav"));
     }
 
     void LockscreenMenuLayout::DisposeSfx() {
         pu::audio::DestroySfx(this->resume_sfx);
+        pu::audio::DestroySfx(this->press_sfx);
         if(this->game_art != nullptr) {
             this->game_art->StopSound();
         }
