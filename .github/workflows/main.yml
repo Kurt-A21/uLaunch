@@ -26,10 +26,18 @@ jobs:
         python3 -c "import requests" 2>/dev/null || python3 -m pip install requests || python3 -m pip install --break-system-packages requests
 
     - name: Install dkp-toolchain-vars
+      shell: bash
       run: |
         SUDO=""; if [ "$(id -u)" != "0" ]; then SUDO="sudo -n"; fi
-        $SUDO dkp-pacman -Sy --noconfirm --needed dkp-toolchain-vars \
-          || $SUDO dkp-pacman --noconfirm -U "https://wii.leseratte10.de/devkitPro/other-stuff/dkp-toolchain-vars-1.0.2-1-any.pkg.tar.xz"
+        # Often already in the image; the package mirrors are sometimes flaky, so retry
+        if $SUDO dkp-pacman -Q dkp-toolchain-vars >/dev/null 2>&1; then echo "already installed"; exit 0; fi
+        for i in 1 2 3 4; do
+          $SUDO dkp-pacman -Sy --noconfirm --needed dkp-toolchain-vars && exit 0
+          $SUDO dkp-pacman --noconfirm -U "https://wii.leseratte10.de/devkitPro/other-stuff/dkp-toolchain-vars-1.0.2-1-any.pkg.tar.xz" && exit 0
+          echo "attempt $i failed, retrying in 20 s"; sleep 20
+        done
+        echo "::error title=dkp-toolchain-vars::could not install dkp-toolchain-vars from either source"
+        exit 1
 
     - name: Set workspace permissions
       run: chmod 777 -R "$GITHUB_WORKSPACE"
