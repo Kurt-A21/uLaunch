@@ -73,6 +73,8 @@ jobs:
         echo "::error title=Compile errors::${msg}"
         tail -n 40 build.log | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}' > tail.txt
         echo "::error title=Build log tail::$(cat tail.txt)"
+        head -n 45 build.log | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}' > head.txt
+        echo "::error title=Build log head::$(cat head.txt)"
 
     # The SD card files themselves (GitHub zips them once for download; unzipping gives the SD layout)
     - uses: actions/upload-artifact@master
