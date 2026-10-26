@@ -364,7 +364,40 @@ namespace ul::menu::ui {
     }
 
     int MenuApplication::DisplayDialog(const std::string &title, const std::string &content, const std::vector<std::string> &opts, const bool use_last_opt_as_cancel, pu::sdl2::TextureHandle::Ref icon) {
+        if(GameDialog::IsEnabledByTheme()) {
+            std::vector<DialogOption> game_opts;
+            for(const auto &opt: opts) {
+                game_opts.push_back({ opt, "" });
+            }
+            return this->DisplayOptionsDialog(title, content, game_opts, use_last_opt_as_cancel, icon);
+        }
         return this->CreateShowDialog(title, content, opts, use_last_opt_as_cancel, icon, [&](pu::ui::Dialog::Ref &dialog) {
+            dialog->SetTitleColor(this->dialog_title_clr);
+            dialog->SetContentColor(this->dialog_title_clr);
+            dialog->SetOptionColor(this->dialog_opt_clr);
+            dialog->SetDialogColor(this->dialog_clr);
+            dialog->SetOverColor(this->dialog_over_clr);
+        });
+    }
+
+    int MenuApplication::DisplayOptionsDialog(const std::string &title, const std::string &content, const std::vector<DialogOption> &opts, const bool use_last_opt_as_cancel, pu::sdl2::TextureHandle::Ref icon) {
+        if(GameDialog::IsEnabledByTheme()) {
+            util::JSON haptics_json;
+            const auto haptics_on = TryGetUiElement("main_menu", "haptics", haptics_json) && haptics_json.value("enabled", false);
+            const GameDialogStyle style = { this->dialog_clr, this->dialog_over_clr, this->dialog_title_clr, this->dialog_opt_clr, haptics_on };
+            return GameDialog::Show(this, style, title, content, opts, use_last_opt_as_cancel, icon);
+        }
+
+        // Classic dialog: details go into the text
+        auto full_content = content;
+        std::vector<std::string> labels;
+        for(const auto &opt: opts) {
+            labels.push_back(opt.label);
+            if(!opt.detail.empty()) {
+                full_content += "\n" + opt.label + ": " + opt.detail;
+            }
+        }
+        return this->CreateShowDialog(title, full_content, labels, use_last_opt_as_cancel, icon, [&](pu::ui::Dialog::Ref &dialog) {
             dialog->SetTitleColor(this->dialog_title_clr);
             dialog->SetContentColor(this->dialog_title_clr);
             dialog->SetOptionColor(this->dialog_opt_clr);

@@ -155,6 +155,25 @@ def main():
         (ok if "sound/Main/ResumeApplication.wav" in names or (default / "sound/Main/ResumeApplication.wav").exists() else warn)("a resume sound exists (theme or built-in default)")
         (ok if "resume_card" not in lm else warn)("no leftover resume_card settings")
 
+    gd = ui.get("dialog", {}).get("game_dialog")
+    if gd and gd.get("enabled"):
+        print("== Console-style dialog ==")
+        cc = ui["dialog_color"]; oc = ui["dialog_over_color"]
+        def lum(h):
+            r, g, b = (int(h[i:i + 2], 16) / 255 for i in (1, 3, 5))
+            f = lambda c: c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+            return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+        def contrast(a, b):
+            la, lb = sorted((lum(a), lum(b)), reverse=True); return (la + 0.05) / (lb + 0.05)
+        (ok if contrast(ui["dialog_opt_color"], cc) >= 4.5 else fail)(f"option text on the card: contrast {contrast(ui['dialog_opt_color'], cc):.1f}:1 (>= 4.5)")
+        (ok if contrast("#0b0f14ff", oc) >= 4.5 else fail)(f"dark text on the highlight: contrast {contrast('#0b0f14ff', oc):.1f}:1 (>= 4.5)")
+        (ok if contrast(oc, cc) >= 3 else fail)(f"highlight stands out from the card: {contrast(oc, cc):.1f}:1 (>= 3)")
+        hdr = (repo / "projects/uMenu/include/ul/menu/ui/ui_GameDialog.hpp").read_text()
+        g = {k: int(v) for k, v in re.findall(r"static constexpr s32 (\w+) = (\d+);", hdr)}
+        rows_fit = (H - 120 - (g["Padding"] + 45 + 34) - g["FooterHeight"] - 24 + g["RowGap"]) // (g["RowHeight"] + g["RowGap"])
+        (ok if rows_fit >= 6 else fail)(f"{rows_fit} option rows fit on screen before the list scrolls")
+        (ok if g["RowHeight"] >= 64 else fail)(f"rows are {g['RowHeight']}px tall (>= 64, easy to tap in handheld)")
+
     print()
     print(f"{'PASSED' if not fails else 'FAILED'}: {len(fails)} failure(s), {len(warns)} warning(s)")
     sys.exit(1 if fails else 0)

@@ -55,16 +55,16 @@ namespace ul::menu::ui {
         }
 
         void ShowPresetPicker() {
-            std::vector<std::string> opts;
-            std::string content = g_TargetName + (g_TargetViaTakeover ? " (runs as your take-over game)" : "") + "\n\n";
+            std::vector<DialogOption> opts;
+            const auto current = CurrentPresetLabel();
+            const std::string content = g_TargetName + (g_TargetViaTakeover ? " (runs as your take-over game)" : "") + "\nNow: " + current;
             for(u32 i = 0; i < static_cast<u32>(perf::Preset::Count); i++) {
                 const auto preset = static_cast<perf::Preset>(i);
-                opts.push_back(perf::GetPresetName(preset));
-                content += std::string(perf::GetPresetName(preset)) + ": " + perf::GetPresetDescription(preset) + "\n";
+                opts.push_back({ perf::GetPresetName(preset), perf::GetPresetDescription(preset) });
             }
-            opts.push_back("Cancel");
+            opts.push_back({ "Cancel", "" });
 
-            const auto option = g_MenuApplication->DisplayDialog(Title, content, opts, true);
+            const auto option = g_MenuApplication->DisplayOptionsDialog(Title, content, opts, true);
             if((option < 0) || (option >= static_cast<s32>(perf::Preset::Count))) {
                 return;
             }
@@ -113,17 +113,17 @@ namespace ul::menu::ui {
             content += "\nOverclocking is paused.";
         }
 
-        std::vector<std::string> opts;
+        std::vector<DialogOption> opts;
         s32 set_opt = -1;
         if(g_TargetAppId != 0) {
             set_opt = static_cast<s32>(opts.size());
-            opts.push_back("Set preset");
+            opts.push_back({ "Set preset", "For " + g_TargetName });
         }
         const auto toggle_opt = static_cast<s32>(opts.size());
-        opts.push_back(enabled ? "Pause overclocking" : "Resume overclocking");
-        opts.push_back("Close");
+        opts.push_back({ enabled ? "Pause overclocking" : "Resume overclocking", "All games" });
+        opts.push_back({ "Close", "" });
 
-        const auto option = g_MenuApplication->DisplayDialog(Title, content, opts, true);
+        const auto option = g_MenuApplication->DisplayOptionsDialog(Title, content, opts, true);
         if(option == set_opt) {
             ShowPresetPicker();
         }

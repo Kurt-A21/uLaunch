@@ -229,6 +229,7 @@ ui["startup_menu"]["user_carousel"] = {"enabled": True, "y": 540, "avatar_size":
 # with the dynamic "press the same button three times" prompt over the paused game
 ui["lockscreen_menu"] = json.loads(json.dumps(default_ui["lockscreen_menu"]))
 ui["lockscreen_menu"]["unlock_prompt"] = {"enabled": True, "y": 470, "presses": 3}
+ui["dialog"] = {"game_dialog": {"enabled": True}}  # console-style dialogs (vertical list, A/B hints)
 # Same spots as the original, adjusted for Deck Night's 56 px status icons (percentage beside, not on, the battery)
 ui["lockscreen_menu"]["battery_top_icon"] = {"x": 1566, "y": 48}
 ui["lockscreen_menu"]["battery_text"] = {"x": 1632, "y": 58, "font_size": "small"}

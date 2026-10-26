@@ -1,5 +1,6 @@
 
 #pragma once
+#include <ul/menu/ui/ui_GameDialog.hpp>
 #include <ul/menu/ui/ui_MainMenuLayout.hpp>
 #include <ul/menu/ui/ui_StartupMenuLayout.hpp>
 #include <ul/menu/ui/ui_ThemesMenuLayout.hpp>
@@ -241,6 +242,9 @@ namespace ul::menu::ui {
             }
 
             int DisplayDialog(const std::string &title, const std::string &content, const std::vector<std::string> &opts, const bool use_last_opt_as_cancel, pu::sdl2::TextureHandle::Ref icon = {});
+            // steamui: like DisplayDialog, but each option can carry a short detail (shown on its right in the console-style dialog,
+            // folded into the text for themes without it)
+            int DisplayOptionsDialog(const std::string &title, const std::string &content, const std::vector<DialogOption> &opts, const bool use_last_opt_as_cancel, pu::sdl2::TextureHandle::Ref icon = {});
     };
 
     inline void RegisterMenuOnMessageDetect() {

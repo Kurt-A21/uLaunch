@@ -22,6 +22,12 @@ This is a fork of [uLaunch](https://github.com/XorTroll/uLaunch) 1.2.5. It repla
     - Three taps on the screen work too. HOME goes to the home screen instead.
     - Behind it, the paused game's art and frame are dimmed, with "<game> · paused" at the bottom.
   - This works even if uLaunch's own lock screen setting is off.
+- **Console-style dialogs.** Every popup (Performance, power, game options, errors...) uses one look instead of the stock Switch dialog:
+  - a dark card that springs up over a dimmed screen
+  - options as a vertical list, with the blue highlight gliding between rows and popping on each move (click + rumble tick)
+  - a short detail on the right of an option where it helps (e.g. what each overclock preset does)
+  - A Select / B Back hints at the bottom; long lists scroll
+  - tap an option to pick it, tap outside the card to go back
 - **Burger menu (top right).** Tap it, or press ZL/ZR, and the old nav bar (Power, Controllers, Album, Web, User, Themes, Settings, Mii, amiibo) slides down as a list.
 
 Theme: **Deck Night** (`ulaunch/themes/DeckNight.ultheme`).
@@ -138,6 +144,7 @@ These keys are new in this fork:
 - `main_menu.haptics.enabled`: HD Rumble ticks on/off.
 - `startup_menu.user_carousel`: `{"enabled": true, "y": 540, "avatar_size": 256, "spacing": 340}` turns the profile list into the avatar row. Without it, uLaunch's original list is used.
 - `lockscreen_menu.unlock_prompt`: `{"enabled": true, "y": 470, "presses": 3}` gives the dynamic press-to-unlock prompt, shown after sleep whenever a game is suspended.
+- `dialog.game_dialog`: `{"enabled": true}` turns on the console-style dialogs. Colors come from `dialog_color` (card), `dialog_over_color` (highlight) and `dialog_opt_color` (text). Without it, the stock dialog is used.
 - `quick_menu.quick_menu.slide_down`: `true` turns the quick menu into a dropdown. Related keys: `width`, `item_height`, `items_to_show`, `dim_alpha`.
 
 ## Essential homebrew apps

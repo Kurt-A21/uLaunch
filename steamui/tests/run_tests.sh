@@ -34,6 +34,10 @@ $CXX "${F[@]}" -fsanitize=address,undefined "$T/test_carousel.cpp" "$OUT/uc.o" -
 echo "### Lock screen: press the same button three times"
 $CXX "${F[@]}" -Werror -fsanitize=address,undefined -c "$SRC/source/ul/menu/ui/ui_UnlockPrompt.cpp" -o "$OUT/up.o"
 $CXX "${F[@]}" -fsanitize=address,undefined "$T/test_unlock.cpp" "$OUT/up.o" -o "$OUT/test_unlock"
+
+echo "### Console-style dialogs: selection, scrolling, held repeat"
+$CXX "${F[@]}" -fsanitize=address,undefined "$T/test_dialog.cpp" -o "$OUT/test_dialog"
+"$OUT/test_dialog"
 "$OUT/test_unlock"
 
 echo "### Burger-menu overclock presets == oc_profile.py presets"
