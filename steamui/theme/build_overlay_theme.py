@@ -52,6 +52,14 @@ over = {
     "s2_highlight_color_1": BLUE, "s2_highlight_color_2": BLUE_LIGHT,
     "s2_table_border_color_1": BLUE, "s2_table_border_color_2": BLUE_LIGHT,
     "s2_widget_border_color_1": BLUE, "s2_widget_border_color_2": BLUE_LIGHT,
+    # Newer Ultrahand (2.5.x) animates these between shades: keep them in the Deck Night blues
+    # (otherwise Ultrahand's default white/pink/grey-purple shows through)
+    "s2_highlight_color_3": "CDEBFF", "s2_highlight_color_3_deep": "8FD0FF",
+    "s2_highlight_color_4": BLUE_LIGHT, "s2_highlight_color_4_deep": BLUE,
+    "s2_table_border_color_3": DIM, "s2_table_border_color_3_deep": "3A4654",
+    "s2_table_border_color_4": BLUE_LIGHT, "s2_table_border_color_4_deep": BLUE,
+    "s2_widget_border_color_3": DIM, "s2_widget_border_color_3_deep": "3A4654",
+    "s2_widget_border_color_4": BLUE_LIGHT, "s2_widget_border_color_4_deep": BLUE,
 }
 allowed = set(t) | (set(open(sys.argv[3]).read().split()) if len(sys.argv) > 3 else set())
 unknown = [k for k in over if k not in allowed]

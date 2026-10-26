@@ -1,6 +1,7 @@
 #include <ul/menu/ui/ui_GameDialog.hpp>
 #include <ul/menu/ui/ui_Common.hpp>
 #include <ul/menu/ui/ui_Haptics.hpp>
+#include <ul/menu/ui/ui_DialogText.hpp>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -63,41 +64,6 @@ namespace ul::menu::ui {
             }
         };
 
-        // Word-wraps every line of the text to max_width (Plutonium only truncates)
-        std::string WrapText(const std::string &font, const std::string &text, const s32 max_width) {
-            std::string out;
-            size_t line_start = 0;
-            while(line_start <= text.size()) {
-                const auto line_end = std::min(text.find('\n', line_start), text.size());
-                const auto line = text.substr(line_start, line_end - line_start);
-                std::string cur;
-                size_t i = 0;
-                while(i < line.size()) {
-                    auto j = line.find(' ', i);
-                    if(j == std::string::npos) {
-                        j = line.size();
-                    }
-                    const auto word = line.substr(i, j - i);
-                    const auto candidate = cur.empty() ? word : (cur + " " + word);
-                    if(!cur.empty() && (pu::ui::render::GetTextWidth(font, candidate) > max_width)) {
-                        out += cur + "\n";
-                        cur = word;
-                    }
-                    else {
-                        cur = candidate;
-                    }
-                    i = j + 1;
-                }
-                out += cur;
-                if(line_end >= text.size()) {
-                    break;
-                }
-                out += "\n";
-                line_start = line_end + 1;
-            }
-            return out;
-        }
-
         // Round button glyph with a letter, like the console's own hints; returns its width
         s32 RenderHint(pu::ui::render::Renderer::Ref &drawer, pu::sdl2::Texture letter, pu::sdl2::Texture label, const s32 right_x, const s32 cy, const pu::ui::Color clr, const double a) {
             const auto lw = GetTextureWidth(label);
@@ -139,7 +105,12 @@ namespace ul::menu::ui {
             const auto dw = opt.detail.empty() ? 0 : (pu::ui::render::GetTextWidth(detail_font, opt.detail) + DetailGap);
             want_inner = std::max(want_inner, 2 * RowTextMargin + pu::ui::render::GetTextWidth(label_font, opt.label) + dw);
         }
-        const auto wrapped = WrapText(content_font, content, max_inner);
+        // Long text never pushes the options off the card: it's cut to the space left for it
+        const auto header_est_h = std::max(has_icon ? IconSize : 0, title.empty() ? 0 : pu::ui::render::GetTextHeight(pu::ui::GetDefaultFont(pu::ui::DefaultFontSize::Large), title));
+        const auto max_cnt_h = (ScreenH - 2 * ScreenMargin) - Padding - header_est_h - HeaderContentGap - ContentRowsGap - (2 * RowHeight + RowGap) - 24 - FooterHeight;
+        const auto text_w = [&](const std::string &t) { return pu::ui::render::GetTextWidth(content_font, t); };
+        const auto text_h = [&](const std::string &t) { return pu::ui::render::GetTextHeight(content_font, t); };
+        const auto wrapped = LimitLines(text_h, WrapText(text_w, content, max_inner), max_cnt_h);
         auto cnt_tex = texts.Make(pu::ui::DefaultFontSize::Medium, wrapped, WithAlpha(style.text_clr, 0xFF));
         if(cnt_tex != nullptr) {
             want_inner = std::max(want_inner, GetTextureWidth(cnt_tex));

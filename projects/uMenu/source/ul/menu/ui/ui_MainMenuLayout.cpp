@@ -238,7 +238,6 @@ namespace ul::menu::ui {
                             }
                             else {
                                 this->hover_media->StopSound();
-                                RecordLaunch(HoverMedia::MakeApplicationKey(cur_entry.app_info.app_id));
                                 this->entry_menu->PlayPressAnimation();
                                 this->haptics.Play(Haptics::Kind::Press);
                                 pu::audio::PlaySfx(this->launch_app_sfx);
@@ -246,6 +245,8 @@ namespace ul::menu::ui {
                                 g_MenuApplication->FadeOutToNonLibraryApplet();
                                 const auto rc = smi::LaunchApplication(cur_entry.app_info.app_id);
                                 if(R_SUCCEEDED(rc)) {
+                                    // steamui: only real launches are logged (matches video captures to games)
+                                    RecordLaunch(HoverMedia::MakeApplicationKey(cur_entry.app_info.app_id));
                                     g_MenuApplication->Finalize();
                                     return;
                                 }
@@ -643,9 +644,8 @@ namespace ul::menu::ui {
     }
 
     void MainMenuLayout::LaunchHomebrewApplication(const Entry &hb_entry) {
-        // steamui: stop the hover preview and note the launch (matches captures to games)
+        // steamui: stop the hover preview
         this->hover_media->StopSound();
-        RecordLaunch(HoverMedia::MakeHomebrewKey(hb_entry.hb_info.nro_target.nro_path));
 
         // Take care if there is a suspended app
         auto do_launch = true;
@@ -665,6 +665,8 @@ namespace ul::menu::ui {
             g_MenuApplication->FadeOutToNonLibraryApplet();
             const auto rc = smi::LaunchHomebrewApplication(ipt.nro_path, ipt.nro_argv);
             if(R_SUCCEEDED(rc)) {
+                // steamui: only real launches are logged (matches video captures to games)
+                RecordLaunch(HoverMedia::MakeHomebrewKey(hb_entry.hb_info.nro_target.nro_path));
                 g_MenuApplication->Finalize();
                 return;
             }

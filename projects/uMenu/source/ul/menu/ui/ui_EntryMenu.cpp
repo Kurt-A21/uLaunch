@@ -241,7 +241,7 @@ namespace ul::menu::ui {
         return entry;
     }
 
-    EntryMenu::EntryMenu(const s32 x, const s32 y, const std::string &path, FocusedEntryInputPressedCallback cur_entry_input_cb, FocusedEntryChangedCallback cur_entry_changed_cb, FocusedEntryChangeStartedCallback cur_entry_change_started_cb) : x(x), y(y), cur_entry_idx(0), entry_idx_stack(), cur_entry_input_cb(cur_entry_input_cb), cur_entry_changed_cb(cur_entry_changed_cb), cur_entry_change_started_cb(cur_entry_change_started_cb), enabled(true), selected_entry_idx(-1), empty_entry_icon(nullptr), selected_entry_icon(nullptr), entry_h_margin(EntryVerticalMargin), entries_to_add(), entries_to_remove(), pending_load_img_entry_start_idx(UINT32_MAX), pending_load_img_entry_ext_idx(UINT32_MAX), pending_load_img_done(false), entry_page_count(0), entry_total_count(0), swipe_mode(SwipeMode::None), entries_base_swipe_neg_offset(0), entries_base_swipe_neg_offset_incr(), extra_entry_swipe_show_h_count(0), focus_scale(1.0), focus_scale_vel(0.0) {
+    EntryMenu::EntryMenu(const s32 x, const s32 y, const std::string &path, FocusedEntryInputPressedCallback cur_entry_input_cb, FocusedEntryChangedCallback cur_entry_changed_cb, FocusedEntryChangeStartedCallback cur_entry_change_started_cb) : x(x), y(y), cur_entry_idx(0), entry_idx_stack(), cur_entry_input_cb(cur_entry_input_cb), cur_entry_changed_cb(cur_entry_changed_cb), cur_entry_change_started_cb(cur_entry_change_started_cb), enabled(true), selected_entry_idx(-1), empty_entry_icon(nullptr), selected_entry_icon(nullptr), entry_h_margin(EntryVerticalMargin), entries_to_add(), entries_to_remove(), pending_load_img_entry_start_idx(UINT32_MAX), pending_load_img_entry_ext_idx(UINT32_MAX), pending_load_img_done(false), entry_page_count(0), entry_total_count(0), swipe_mode(SwipeMode::None), entries_base_swipe_neg_offset(0), entries_base_swipe_neg_offset_incr(), extra_entry_swipe_show_h_count(0), focus_scale(1.0), focus_scale_vel(0.0), touch_active(false) {
         this->cursor_over_icon = TryFindLoadImage("ui/Main/OverIcon/Cursor");
         this->cursor_size = 0;
         this->border_over_icon = TryFindLoadImage("ui/Main/OverIcon/Border");
@@ -523,7 +523,26 @@ namespace ul::menu::ui {
         UL_LOG_INFO("EntryMenu::OnRender took %d ms", time_diff);
     }
 
+    s32 EntryMenu::GetTouchedEntryIndex(const pu::ui::TouchPoint touch_pos) {
+        for(u32 i = 0; i < this->entry_page_count; i++) {
+            const auto idx_x = i / g_EntryHeightCount;
+            const auto idx_y = i % g_EntryHeightCount;
+            const auto tile_x = this->GetProcessedX() + static_cast<s32>(HorizontalSideMargin + idx_x * (this->entry_size + this->entry_h_margin));
+            const auto tile_y = this->GetProcessedY() + static_cast<s32>(this->v_side_margin + idx_y * (this->entry_size + EntryVerticalMargin));
+            if(touch_pos.HitsRegion(tile_x, tile_y, this->entry_size, this->entry_size)) {
+                return static_cast<s32>(this->base_entry_idx_x * g_EntryHeightCount + i);
+            }
+        }
+        return -1;
+    }
+
     void EntryMenu::OnInput(const u64 keys_down, const u64 keys_up, const u64 keys_held, const pu::ui::TouchPoint touch_pos) {
+        // steamui: a touch only counts when the finger lands (tracked even while disabled, so a finger
+        // that closed the quick menu doesn't then "tap" the game underneath)
+        const auto touching = !touch_pos.IsEmpty();
+        const auto tap_started = touching && !this->touch_active;
+        this->touch_active = touching;
+
         if(this->IsCursorInTransition()) {
             return;
         }
@@ -533,6 +552,36 @@ namespace ul::menu::ui {
 
         const auto cursor_transition_abs_incr_x = this->entry_h_margin + this->entry_size;
         const auto cursor_transition_abs_incr_y = EntryVerticalMargin + this->entry_size;
+
+        // steamui: tap a tile to focus it (same glide as the D-pad), tap the focused tile to open it (like A)
+        if(tap_started && this->IsNotInSwipe()) {
+            const auto tapped_idx = this->GetTouchedEntryIndex(touch_pos);
+            if(tapped_idx >= 0) {
+                if(static_cast<u32>(tapped_idx) == this->cur_entry_idx) {
+                    this->cur_entry_input_cb(HidNpadButton_A);
+                }
+                else {
+                    const auto delta_x = static_cast<s32>(tapped_idx / g_EntryHeightCount) - static_cast<s32>(this->cur_entry_idx / g_EntryHeightCount);
+                    const auto delta_y = static_cast<s32>(tapped_idx % g_EntryHeightCount) - static_cast<s32>(this->cur_entry_idx % g_EntryHeightCount);
+                    this->pre_transition_entry_idx = this->cur_entry_idx;
+                    if(delta_y == 0) {
+                        this->after_transition_entry_idx = tapped_idx;
+                        this->cursor_transition_x_incr.Start(CursorTransitionIncrementSteps, 0, delta_x * static_cast<s32>(cursor_transition_abs_incr_x));
+                    }
+                    else if(delta_x == 0) {
+                        this->after_transition_entry_idx = tapped_idx;
+                        this->cursor_transition_y_incr.Start(CursorTransitionIncrementSteps, 0, delta_y * static_cast<s32>(cursor_transition_abs_incr_y));
+                    }
+                    else {
+                        // Different row and column (multi-row layouts only): jump straight there
+                        this->cur_entry_idx = tapped_idx;
+                        this->NotifyFocusedEntryChanged(this->pre_transition_entry_idx);
+                    }
+                    this->cur_entry_change_started_cb();
+                }
+                return;
+            }
+        }
 
         if((keys_down & HidNpadButton_Up) || (keys_held & HidNpadButton_StickLUp) || (keys_held & HidNpadButton_StickRUp)) {
             const auto cur_entry_idx_y = this->cur_entry_idx % g_EntryHeightCount;

@@ -8,11 +8,12 @@ from each project's GitHub "Releases" page and puts them in the right place on y
   python3 get_homebrew.py /Volumes/SWITCH --only jksv,ftpd
   python3 get_homebrew.py /Volumes/SWITCH --with-missioncontrol
   python3 get_homebrew.py --list
+  python3 get_homebrew.py /Volumes/SWITCH --only atmosphere --pin atmosphere=1.11.2   # a specific release
 
 Nothing is deleted: files are added or replaced. Back up the SD card first anyway.
 No extra Python packages needed (standard library only).
 """
-import argparse, io, json, os, re, sys, urllib.request, zipfile
+import argparse, io, json, os, re, sys, urllib.parse, urllib.request, zipfile
 from pathlib import Path, PurePosixPath
 
 API = os.environ.get("STEAMUI_GITHUB_API", "https://api.github.com")
@@ -143,10 +144,20 @@ def install_source_folder(pkg, sd: Path, dry):
     return n > 0
 
 
+PINS = {}  # key -> release tag (from --pin)
+
+
 def pick_assets(pkg):
     """[(pattern, kind, dest, asset, tag)] for each file the package wants, from the latest release
     (or, with any_release, the newest release that has it)."""
     picks = []
+    if pkg["key"] in PINS:
+        rel = http_json(f"{API}/repos/{pkg['repo']}/releases/tags/{urllib.parse.quote(PINS[pkg['key']], safe='')}")
+        for pattern, kind, dest in pkg["files"]:
+            asset = next((a for a in rel.get("assets", []) if re.match(pattern, a["name"], re.I)), None)
+            if asset is not None:
+                picks.append((pattern, kind, dest, asset, rel.get("tag_name", "?") + " (pinned)"))
+        return picks
     if pkg.get("newest"):
         for rel in http_json(f"{API}/repos/{pkg['repo']}/releases?per_page=20"):
             if rel.get("draft"):
@@ -218,7 +229,13 @@ def main():
     ap.add_argument("--skip-core", action="store_true", help="don't touch Atmosphere/hekate/sys-clk")
     ap.add_argument("--with-missioncontrol", action="store_true")
     ap.add_argument("--list", action="store_true")
+    ap.add_argument("--pin", action="append", default=[], metavar="KEY=TAG", help="install that release instead of the latest, e.g. atmosphere=1.11.2")
     a = ap.parse_args()
+    for pin in a.pin:
+        key, _, tag = pin.partition("=")
+        if not tag or key not in {p["key"] for p in PACKAGES}:
+            ap.error(f"--pin needs KEY=TAG with a key from --list, got '{pin}'")
+        PINS[key] = tag
 
     if a.list:
         for p in PACKAGES:

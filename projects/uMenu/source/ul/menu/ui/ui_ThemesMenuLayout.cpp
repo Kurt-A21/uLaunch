@@ -48,6 +48,8 @@ namespace ul::menu::ui {
     void ThemesMenuLayout::Reload() {
         this->themes_menu->ClearItems();
         this->loaded_themes.clear();
+        // steamui fix: the icons were never cleared, so on a second visit they no longer lined up with the themes
+        this->loaded_theme_icons.clear();
         
         this->loaded_themes = cfg::FindThemes();
         this->loaded_themes.insert(this->loaded_themes.begin(), cfg::Theme{}); // For the "default theme" entry

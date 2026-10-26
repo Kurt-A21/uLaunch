@@ -103,6 +103,10 @@ namespace ul::menu::ui {
         if(g_TargetAppId != 0) {
             content = g_TargetName + ": " + CurrentPresetLabel() + "\n\n";
         }
+        else if(g_TargetViaTakeover) {
+            // A homebrew app is highlighted, but there's no take-over game for it to run as (and so no profile to set)
+            content = g_TargetName + " runs as your take-over game, but none is set yet.\nPress X on a game you don't mind lending > Select as homebrew donor/take-over application.\n\n";
+        }
         else {
             content = "Highlight a game on the home screen to set its overclock.\n\n";
         }

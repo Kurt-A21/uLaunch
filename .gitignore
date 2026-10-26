@@ -26,3 +26,7 @@ projects/uDesigner/assets/default-theme.ultheme
 dev/
 compile_flags.txt
 .clangd
+
+# steamui: Python bytecode
+__pycache__/
+*.pyc

@@ -113,6 +113,8 @@ namespace ul::menu::ui {
             u32 extra_entry_swipe_show_h_count;
             double focus_scale;
             double focus_scale_vel;
+            // steamui: touch on the game row (a held finger only counts once)
+            bool touch_active;
 
             inline bool IsNotInSwipe() {
                 return this->swipe_mode == SwipeMode::None;
@@ -134,6 +136,7 @@ namespace ul::menu::ui {
             bool LoadEntry(const u32 idx);
 
             void NotifyFocusedEntryChanged(const s32 prev_entry_idx, const s32 is_prev_entry_suspended_override = -1);
+            s32 GetTouchedEntryIndex(const pu::ui::TouchPoint touch_pos);
 
             inline bool IsCursorInTransition() {
                 return !this->cursor_transition_x_incr.IsDone() || !this->cursor_transition_y_incr.IsDone();

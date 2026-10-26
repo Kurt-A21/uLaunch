@@ -4,7 +4,7 @@
 set -euo pipefail
 T="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$T/../../.."
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
-git clone -q --depth 1 https://github.com/retronx-team/sys-clk.git "$W/sys-clk"
+git clone -q --depth 1 --branch "${SYSCLK_REF:-2.0.1}" --recurse-submodules https://github.com/retronx-team/sys-clk.git "$W/sys-clk"
 git clone -q --depth 1 https://github.com/switchbrew/libnx.git "$W/libnx"
 SC="$W/sys-clk"
 I=(-I"$SC/sysmodule/src" -I"$SC/common/include" -I"$SC/sysmodule/lib/minIni/include" -I"$SC/sysmodule/lib/nxExt/include" -I"$T/nxstub" -I"$W/libnx/nx/include" -D__SWITCH__ -DTARGET='"sys-clk"')

@@ -47,9 +47,9 @@ BASE = f"http://127.0.0.1:{srv.server_address[1]}"
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 
 ROUTES.update({
-    # sphaira: SD-layout zip (+ its own hbmenu.nro) and a bare nro; only one should be used
+    # sphaira: the real 1.0.8 zip holds just switch/sphaira/sphaira.nro; a bare .nro is also offered here: only one is used
     "/repos/ITotalJustice/sphaira/releases/latest": {"tag_name": "1.0.8", "assets": [asset("sphaira.zip"), asset("sphaira.nro")]},
-    "/dl/sphaira.zip": mkzip({"switch/sphaira/sphaira.nro": b"SPHAIRA-ZIP", "hbmenu.nro": b"SPHAIRA-HBMENU"}),
+    "/dl/sphaira.zip": mkzip({"switch/sphaira/sphaira.nro": b"SPHAIRA-ZIP"}),
     "/dl/sphaira.nro": b"SPHAIRA-BARE",
     # NXThemes: latest release is the PC injector (no .nro) -> must fall back to the newest installer release
     "/repos/exelix11/SwitchThemeInjector/releases/latest": {"tag_name": "v4.8.1", "assets": [asset("SwitchThemes.zip")]},
@@ -71,13 +71,13 @@ with tempfile.TemporaryDirectory() as d:
     lyt.parent.mkdir(parents=True); lyt.write_bytes(b"MY-NXTHEME")
     (sd / "atmosphere/contents/0100000000001000/exefs.nsp").write_bytes(b"ULAUNCH")
     (sd / "config/sphaira").mkdir(parents=True); (sd / "config/sphaira/config.ini").write_bytes(b"MINE")
-    (sd / "atmosphere/hbmenu.nro").write_bytes(b"x")
+    (sd / "hbmenu.nro").write_bytes(b"ATMOSPHERE-HBMENU")
     out = subprocess.run([sys.executable, "-I", str(TOOL), str(sd), "--only", "sphaira,nxthemes,themepatches"], env=env, capture_output=True, text=True)
     print(out.stdout.rstrip())
     print("== Results ==")
     check(out.returncode == 0 and "need attention" not in out.stdout, "all three installed without errors")
     check((sd / "switch/sphaira/sphaira.nro").read_bytes() == b"SPHAIRA-ZIP", "sphaira: release zip used, app in switch/sphaira/ (shows on the steamui home row)")
-    check((sd / "hbmenu.nro").read_bytes() == b"SPHAIRA-HBMENU", "sphaira: its hbmenu.nro replaces the stock homebrew menu")
+    check((sd / "hbmenu.nro").read_bytes() == b"ATMOSPHERE-HBMENU", "sphaira doesn't overwrite the stock homebrew menu (hbmenu.nro)")
     check((sd / "switch/NXThemesInstaller/NXThemesInstaller.nro").read_bytes() == b"NXTHEMES", "NXThemes Installer: found in the newest installer release (not the PC injector, not a beta)")
     check("nxt-3.0.2" in out.stdout, "NXThemes: reports the installer release it used")
     check((sd / "themes/systemPatches/ResidentMenu/21.2.0.ips").read_bytes() == b"PATCH" and (sd / "themes/systemPatches/Entrance/21.2.0.ips").exists(), "theme patches in themes/systemPatches (works offline on emuMMC)")
@@ -135,6 +135,19 @@ with tempfile.TemporaryDirectory() as d:
     check((sd / "config/NX-FanControl/config.dat").read_bytes() == b"MY-CURVE", "an existing fan curve is kept")
     check("delete atmosphere/contents/00FF0000B378D640/flags/boot2.flag" in out.stdout and "0000000000534C56" in out.stdout, "tells you how to turn each new sysmodule off")
     check((sd / "switch/tico/tico.nro").read_bytes() == b"TICO", "tico in switch/tico/tico.nro (the path it requires; shows on the home row)")
+
+# ---- --pin: a specific release instead of the latest ----
+ROUTES["/repos/Atmosphere-NX/Atmosphere/releases/tags/1.11.2"] = {"tag_name": "1.11.2", "assets": [asset("atmosphere-1.11.2-master-abc.zip"), asset("fusee-1112.bin")]}
+ROUTES["/repos/Atmosphere-NX/Atmosphere/releases/tags/1.11.2"]["assets"][1]["name"] = "fusee.bin"
+ROUTES["/dl/atmosphere-1.11.2-master-abc.zip"] = mkzip({"atmosphere/package3": b"AMS-1.11.2", "hbmenu.nro": b"HB"})
+ROUTES["/dl/fusee-1112.bin"] = b"FUSEE-1.11.2"
+with tempfile.TemporaryDirectory() as d:
+    sd = Path(d)
+    out = subprocess.run([sys.executable, "-I", str(TOOL), str(sd), "--only", "atmosphere", "--pin", "atmosphere=1.11.2"], env=env, capture_output=True, text=True)
+    check((sd / "atmosphere/package3").read_bytes() == b"AMS-1.11.2" and (sd / "bootloader/payloads/fusee.bin").read_bytes() == b"FUSEE-1.11.2", "--pin atmosphere=1.11.2 installs that release (package3 + matching fusee)")
+    check("1.11.2 (pinned)" in out.stdout, "and says it's pinned")
+    bad = subprocess.run([sys.executable, "-I", str(TOOL), str(sd), "--pin", "nonsense"], env=env, capture_output=True, text=True)
+    check(bad.returncode != 0 and "KEY=TAG" in bad.stderr, "a malformed --pin is rejected")
 
 srv.shutdown()
 print("ALL PASSED" if not fails else f"FAILED: {fails}")

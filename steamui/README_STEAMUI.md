@@ -2,7 +2,7 @@
 
 This is a fork of [uLaunch](https://github.com/XorTroll/uLaunch) 1.2.5. It replaces the Switch home menu with:
 
-- **The game row along the bottom.** The bottom nav bar and button hints are gone.
+- **The game row along the bottom.** The bottom nav bar and button hints are gone. In handheld you can also tap: tap a game to highlight it, tap it again to open it.
 - **Hover art.** The hovered game's art fills the screen, crossfading in with a slow zoom.
 - **Hover sound.** The hovered game's sound plays once you stop on it, and the menu music ducks underneath.
 - **Console-style feel.**
@@ -34,7 +34,7 @@ Theme: **Deck Night** (`ulaunch/themes/DeckNight.ultheme`).
 
 ## Requirements
 
-- Atmosphere 1.12.1 (or anything recent that supports your firmware).
+- Atmosphere 1.12.1 (or anything recent that supports your firmware). steamui's base, uLaunch 1.2.5, was built against Atmosphere 1.11.2; if anything misbehaves on 1.12.x, `get_homebrew.py <SD> --only atmosphere --pin atmosphere=1.11.2` installs that exact release (it supports 21.2.0 too).
 - Firmware 21.2.0. Anything up to 22.5.0 works; **23.x is not supported by uLaunch yet.**
 - **steamui replaces Nintendo's HOME menu while it's active.** NXThemes theme Nintendo's HOME menu, so they don't show inside steamui. They can live side by side, and you can switch between the two whenever you like (see *Themes* below).
 
@@ -63,7 +63,7 @@ There are two kinds, and you can switch between them whenever you want:
 
 **Switching between steamui and Nintendo's HOME menu:**
 - **To Nintendo's HOME menu (your NXTheme):** burger menu → Themes → **Nintendo HOME menu · NXThemes** → *Switch and restart*. Only steamui's `exefs.nsp` is removed; its backup stays in `ulaunch/bin/uSystem/`.
-- **Back to steamui:** in Nintendo's HOME menu, open the Album (the homebrew menu: sphaira, or hbmenu if sphaira isn't set as it), run **uManager**, choose **Activate**, and reboot.
+- **Back to steamui:** in Nintendo's HOME menu, open the Album (the homebrew menu), run **uManager**, choose **Activate**, and reboot.
 - Neither direction touches your NXTheme, games, saves or settings. (Stock uManager's Deactivate deleted the whole folder, NXTheme included; this build only removes that one file.)
 
 ## Homebrew apps and ports
@@ -184,7 +184,7 @@ python3 get_homebrew.py /Volumes/SWITCH --with-missioncontrol
 | Homebrew App Store | Browse and update homebrew |
 | Ultrahand | Overlay menu (L + D-pad Down + right stick), hosting the sys-clk and Status Monitor overlays |
 | Status Monitor | Live temperatures and clocks while overclocking |
-| sphaira | Homebrew menu (replaces hbmenu): app list, file browser, Themezer theme browser, game installer |
+| sphaira | Homebrew menu with a file browser, Themezer theme browser and game installer. It's an app on your home screen; it can also take over the Album's homebrew menu if you turn that on in its settings |
 | NXThemes Installer | Installs NXThemes on Nintendo's HOME menu (theme patches for your firmware included) |
 | SaltyNX | Background plugin loader that FPSLocker needs. Installs the newest version (2.x, which its author marks experimental), because FPSLocker 3.5 needs 2.x |
 | FPSLocker | Overlay (Ultrahand → FPSLocker): set an FPS target per game (e.g. 60 in 30 FPS games), and the docked refresh rate. Some games need a config: use *Check/download config file* in the overlay. Don't combine it with 60 FPS cheats/mods |
