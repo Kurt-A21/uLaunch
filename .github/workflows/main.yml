@@ -42,9 +42,12 @@ jobs:
     - name: Set workspace permissions
       run: chmod 777 -R "$GITHUB_WORKSPACE"
     
-    - name: Prepare master libnx
+    # steamui: libnx pinned to the commit uLaunch 1.2.5 was built against. libnx master changed the pgl API on
+    # 2026-09-18 ("pgl: add new commands"), which the bundled Atmosphere-libs (1.11.2) no longer compiles with.
+    - name: Prepare libnx (pinned)
       run: |
         git clone https://github.com/switchbrew/libnx
+        git -C libnx checkout dbcc1beafc6b47b5ffbeb8ba82463a7d45da40bb
         make -C libnx/
         cp -r libnx/nx/external/bsd/include libnx/nx
     
