@@ -55,7 +55,7 @@ Files go on the SD card. `APPID` is the game's 16-digit title ID.
 
 **After adding games, run one command:** `python3 steamui_media.py sync /Volumes/SWITCH`. It:
 
-1. Downloads official eShop art for every game that doesn't have a wallpaper yet. New games are detected automatically.
+1. Downloads official eShop art for every game that doesn't have a wallpaper yet. New games are detected automatically from the home menu's game list on the SD card (`ulaunch/emu_<user>/` on emuMMC), so boot the menu once after installing games. The download runs on your computer, so it works even though emuMMC is kept offline.
 2. Lists your new title-screen video captures (sysMMC and emuMMC albums) one by one and asks which game each is. It turns the audio into that game's soundtrack and remembers what's done, so captures are never asked about twice.
 3. Shows which games still lack art or sound.
 

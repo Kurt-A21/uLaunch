@@ -8,7 +8,9 @@ steamui_media.py - fills the SD card with hover art and hover sounds for the ste
           title screen music) to
           <SD>/ulaunch/steamui/sound/<APPID>.wav  (44100 Hz stereo, max 30 s, faded out)
 
-Your installed games are found from uLaunch's menu entries on the SD card (ulaunch/menu/**.m.json).
+Your installed games are found from the home menu's game list on the SD card
+(ulaunch/emu_<user>/ for emuMMC, ulaunch/sys_<user>/ for sysMMC), so boot the menu once after
+installing games. The downloads happen on your computer, so emuMMC being offline doesn't matter.
 
 Usage (SD card mounted on your computer, e.g. /Volumes/SWITCH):
   python3 steamui_media.py art    /Volumes/SWITCH
@@ -34,9 +36,19 @@ CACHE_DIR = Path.home() / ".cache" / "steamui"
 MAX_SOUND_SECONDS = 30
 
 
+def menu_entry_files(sd: Path):
+    """uLaunch keeps one menu per console side and user: ulaunch/emu_<user>/ (emuMMC) and
+    ulaunch/sys_<user>/ (sysMMC), with subfolders for menu folders. ulaunch/menu/ is the older layout."""
+    root = sd / "ulaunch"
+    files = []
+    for pattern in ("emu_*/**/*.m.json", "sys_*/**/*.m.json", "menu/**/*.m.json", "menu_*/**/*.m.json"):
+        files += root.glob(pattern)
+    return files
+
+
 def installed_app_ids(sd: Path):
     ids = set()
-    for f in (sd / "ulaunch").glob("menu*/**/*.m.json"):
+    for f in menu_entry_files(sd):
         try:
             j = json.loads(f.read_text(encoding="utf-8"))
         except Exception:
@@ -220,7 +232,8 @@ def cmd_art(sd: Path, force=False):
     out.mkdir(parents=True, exist_ok=True)
     ids = installed_app_ids(sd)
     if not ids:
-        print("No games found in ulaunch/menu on the SD card. Boot uLaunch once so it creates its menu entries.")
+        print("No games found yet. Boot the steamui home menu once (on emuMMC) so it lists your games")
+        print("on the SD card, then run this again.")
         return
     for tid in ids:
         dst = out / f"{tid}.jpg"
