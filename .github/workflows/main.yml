@@ -41,13 +41,27 @@ jobs:
         cp -r libnx/nx/external/bsd/include libnx/nx
     
     - name: Compile
+      shell: bash
       run: |
-        make -j$(nproc) LIBNX=$PWD/libnx/nx/ usystem uloader umenu umanager
+        set -o pipefail
+        make -j$(nproc) LIBNX=$PWD/libnx/nx/ usystem uloader umenu umanager 2>&1 | tee build.log
         mkdir -p SdOut/ulaunch/themes SdOut/ulaunch/steamui/bg SdOut/ulaunch/steamui/sound
         cp steamui/DeckNight.ultheme SdOut/ulaunch/themes/
         cp -r steamui/overlay/config SdOut/
         cp steamui/README_STEAMUI.md SdOut/
         cp steamui/tools/steamui_media.py steamui/tools/get_homebrew.py steamui/tools/oc_profile.py SdOut/
+
+    # steamui: compiler errors as annotations (readable through the API even when the raw log isn't)
+    - name: Report compile errors
+      if: failure()
+      shell: bash
+      run: |
+        [ -f build.log ] || exit 0
+        grep -n -E "error|Error [0-9]|undefined reference|No rule to make|fatal" build.log | head -60 > errors.txt || true
+        msg=$(sed -e 's/%/%25/g' errors.txt | awk '{printf "%s%%0A", $0}')
+        echo "::error title=Compile errors::${msg}"
+        tail -n 40 build.log | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}' > tail.txt
+        echo "::error title=Build log tail::$(cat tail.txt)"
 
     # The SD card files themselves (GitHub zips them once for download; unzipping gives the SD layout)
     - uses: actions/upload-artifact@master
