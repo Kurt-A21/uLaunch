@@ -38,12 +38,12 @@ jobs:
         cp -r steamui/overlay/config SdOut/
         cp steamui/README_STEAMUI.md SdOut/
         cp steamui/tools/steamui_media.py steamui/tools/get_homebrew.py steamui/tools/oc_profile.py SdOut/
-        zip -r SdOut.zip SdOut
-        
+
+    # The SD card files themselves (GitHub zips them once for download; unzipping gives the SD layout)
     - uses: actions/upload-artifact@master
       with:
         name: SdOut
-        path: SdOut.zip
+        path: SdOut/
         if-no-files-found: error
 
   steamui-tests:
