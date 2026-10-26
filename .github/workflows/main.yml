@@ -33,6 +33,10 @@ jobs:
     - name: Compile
       run: |
         make -j$(nproc) LIBNX=$PWD/libnx/nx/ usystem uloader umenu umanager
+        mkdir -p SdOut/ulaunch/themes SdOut/ulaunch/steamui/bg SdOut/ulaunch/steamui/sound
+        cp steamui/DeckNight.ultheme SdOut/ulaunch/themes/
+        cp steamui/README_STEAMUI.md SdOut/
+        cp steamui/tools/steamui_media.py SdOut/
         zip -r SdOut.zip SdOut
         
     - uses: actions/upload-artifact@master

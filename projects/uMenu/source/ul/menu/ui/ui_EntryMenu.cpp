@@ -241,7 +241,7 @@ namespace ul::menu::ui {
         return entry;
     }
 
-    EntryMenu::EntryMenu(const s32 x, const s32 y, const std::string &path, FocusedEntryInputPressedCallback cur_entry_input_cb, FocusedEntryChangedCallback cur_entry_changed_cb, FocusedEntryChangeStartedCallback cur_entry_change_started_cb) : x(x), y(y), cur_entry_idx(0), entry_idx_stack(), cur_entry_input_cb(cur_entry_input_cb), cur_entry_changed_cb(cur_entry_changed_cb), cur_entry_change_started_cb(cur_entry_change_started_cb), enabled(true), selected_entry_idx(-1), empty_entry_icon(nullptr), selected_entry_icon(nullptr), entry_h_margin(EntryVerticalMargin), entries_to_add(), entries_to_remove(), pending_load_img_entry_start_idx(UINT32_MAX), pending_load_img_entry_ext_idx(UINT32_MAX), pending_load_img_done(false), entry_page_count(0), entry_total_count(0), swipe_mode(SwipeMode::None), entries_base_swipe_neg_offset(0), entries_base_swipe_neg_offset_incr(), extra_entry_swipe_show_h_count(0), focus_scale(1.0) {
+    EntryMenu::EntryMenu(const s32 x, const s32 y, const std::string &path, FocusedEntryInputPressedCallback cur_entry_input_cb, FocusedEntryChangedCallback cur_entry_changed_cb, FocusedEntryChangeStartedCallback cur_entry_change_started_cb) : x(x), y(y), cur_entry_idx(0), entry_idx_stack(), cur_entry_input_cb(cur_entry_input_cb), cur_entry_changed_cb(cur_entry_changed_cb), cur_entry_change_started_cb(cur_entry_change_started_cb), enabled(true), selected_entry_idx(-1), empty_entry_icon(nullptr), selected_entry_icon(nullptr), entry_h_margin(EntryVerticalMargin), entries_to_add(), entries_to_remove(), pending_load_img_entry_start_idx(UINT32_MAX), pending_load_img_entry_ext_idx(UINT32_MAX), pending_load_img_done(false), entry_page_count(0), entry_total_count(0), swipe_mode(SwipeMode::None), entries_base_swipe_neg_offset(0), entries_base_swipe_neg_offset_incr(), extra_entry_swipe_show_h_count(0), focus_scale(1.0), focus_scale_vel(0.0) {
         this->cursor_over_icon = TryFindLoadImage("ui/Main/OverIcon/Cursor");
         this->cursor_size = 0;
         this->border_over_icon = TryFindLoadImage("ui/Main/OverIcon/Border");
@@ -360,10 +360,12 @@ namespace ul::menu::ui {
         // For the swipe animations, additional items are rendered (some will be outside the visible range)
         const auto entry_render_count = this->entry_page_count + this->extra_entry_swipe_show_h_count * g_EntryHeightCount;
 
-        // steamui: ease the focused tile's scale; it shrinks back while the cursor is moving
+        // steamui: spring the focused tile's scale; it shrinks back while the cursor is moving
         const auto focus_moving = this->IsCursorInTransition() || !this->IsNotInSwipe();
         const auto focus_target_scale = focus_moving ? 1.0 : FocusScaleMax;
-        this->focus_scale += (focus_target_scale - this->focus_scale) * FocusScaleEaseFactor;
+        this->focus_scale_vel += (focus_target_scale - this->focus_scale) * FocusSpringStiffness;
+        this->focus_scale_vel *= FocusSpringDamping;
+        this->focus_scale += this->focus_scale_vel;
         const u32 focus_scaled_entry_idx = cur_actual_entry_idx;
         bool retried_load_app_icon = false;
         for(u32 i = 0; i < entry_render_count; i++) {

@@ -38,9 +38,11 @@ namespace ul::menu::ui {
             static constexpr u32 EntriesSwipeSingleIncrementSteps = 6;
             static constexpr u32 EntriesSwipeRewindIncrementSteps = 36;
 
-            // steamui: the focused tile grows slightly (eased every frame)
+            // steamui: the focused tile pops up on a damped spring (slight overshoot, console-style)
             static constexpr double FocusScaleMax = 1.10;
-            static constexpr double FocusScaleEaseFactor = 0.25;
+            static constexpr double FocusSpringStiffness = 0.20;
+            static constexpr double FocusSpringDamping = 0.68;
+            static constexpr double PressImpulse = -0.07;
 
             using FocusedEntryInputPressedCallback = std::function<void(const u64)>;
             using FocusedEntryChangedCallback = std::function<void(const bool, const bool, const bool)>;
@@ -110,6 +112,7 @@ namespace ul::menu::ui {
             pu::ui::SigmoidIncrementer<u32> entries_base_swipe_neg_offset_incr;
             u32 extra_entry_swipe_show_h_count;
             double focus_scale;
+            double focus_scale_vel;
 
             inline bool IsNotInSwipe() {
                 return this->swipe_mode == SwipeMode::None;
@@ -246,6 +249,11 @@ namespace ul::menu::ui {
 
             inline bool IsFocusedEntryInProgress() {
                 return !std::isnan(this->entry_progresses.at(this->cur_entry_idx));
+            }
+
+            // steamui: quick "press" dip of the focused tile (e.g. when launching)
+            inline void PlayPressAnimation() {
+                this->focus_scale_vel += PressImpulse;
             }
 
             bool CanIncrementEntryHeightCount();

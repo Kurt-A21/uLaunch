@@ -235,6 +235,8 @@ namespace ul::menu::ui {
                             }
                             else {
                                 this->hover_media->StopSound();
+                                this->entry_menu->PlayPressAnimation();
+                                this->haptics.Play(Haptics::Kind::Press);
                                 pu::audio::PlaySfx(this->launch_app_sfx);
 
                                 g_MenuApplication->FadeOutToNonLibraryApplet();
@@ -699,6 +701,13 @@ namespace ul::menu::ui {
         this->Add(this->hover_media);
         this->entry_text_alpha = 0xFF;
 
+        // steamui: optional HD Rumble feedback, enabled by the theme (main_menu.haptics.enabled)
+        {
+            util::JSON haptics_json;
+            const auto haptics_on = TryGetUiElement("main_menu", "haptics", haptics_json) && haptics_json.value("enabled", false);
+            this->haptics.Initialize(haptics_on);
+        }
+
         // Load banners first
         this->top_menu_default_bg = pu::ui::elm::Image::New(0, 0, TryFindLoadImageHandle("ui/Main/TopMenuBackground/Default"));
         this->top_menu_folder_bg = pu::ui::elm::Image::New(0, 0, TryFindLoadImageHandle("ui/Main/TopMenuBackground/Folder"));
@@ -776,12 +785,15 @@ namespace ul::menu::ui {
 
         this->Add(this->cur_entry_main_text);
         this->Add(this->cur_entry_sub_text);
+        this->entry_main_text_base_y = this->cur_entry_main_text->GetY();
+        this->entry_sub_text_base_y = this->cur_entry_sub_text->GetY();
 
         this->Add(this->cur_path_text);
         UL_LOG_INFO("MainMenuLayout create: done before entry menu, so far %lld ms", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - time).count());
 
         this->entry_menu = EntryMenu::New(0, 0, g_GlobalSettings.system_status.last_menu_fs_path, std::bind(&MainMenuLayout::menu_EntryInputPressed, this, std::placeholders::_1), std::bind(&MainMenuLayout::menu_FocusedEntryChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), [&]() {
             pu::audio::PlaySfx(this->cursor_move_sfx);
+            this->haptics.Play(Haptics::Kind::Tick);
         });
         g_GlobalSettings.ApplyConfigForElement("main_menu", "entry_menu", this->entry_menu);
         this->Add(this->entry_menu);
@@ -846,6 +858,7 @@ namespace ul::menu::ui {
 
     void MainMenuLayout::DisposeSfx() {
         this->hover_media->StopSound();
+        this->haptics.Stop();
         pu::audio::DestroySfx(this->post_suspend_sfx);
         pu::audio::DestroySfx(this->cursor_move_sfx);
         pu::audio::DestroySfx(this->page_move_sfx);
@@ -889,6 +902,7 @@ namespace ul::menu::ui {
             else {
                 pu::audio::PlaySfx(this->close_quick_menu_sfx);
             }
+            this->haptics.Play(Haptics::Kind::Thump);
         }
         if(quick_menu_on) {
             return;
@@ -1080,13 +1094,20 @@ namespace ul::menu::ui {
     }
 
     void MainMenuLayout::OnMenuUpdate() {
-        // steamui: fade the focused entry's title/author back in after a focus change
+        this->haptics.Update();
+
+        // steamui: the focused entry's title/author fade in while sliding up into place
         if(this->entry_text_alpha < 0xFF) {
             this->entry_text_alpha = std::min<u32>(0xFF, this->entry_text_alpha + EntryTextFadeStep);
             auto clr = g_MenuApplication->GetTextColor();
             const auto alpha = static_cast<u8>((static_cast<u32>(clr.a) * this->entry_text_alpha) / 0xFF);
             this->cur_entry_main_text->SetColor(clr.WithAlpha(alpha));
             this->cur_entry_sub_text->SetColor(clr.WithAlpha(alpha));
+
+            const auto remaining = 1.0 - static_cast<double>(this->entry_text_alpha) / 255.0;
+            const auto slide = static_cast<s32>(EntryTextSlidePixels * remaining * remaining);
+            this->cur_entry_main_text->SetY(this->entry_main_text_base_y + slide);
+            this->cur_entry_sub_text->SetY(this->entry_sub_text_base_y + slide);
         }
     }
 
