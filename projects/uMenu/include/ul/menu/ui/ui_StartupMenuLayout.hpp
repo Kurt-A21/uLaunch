@@ -1,6 +1,8 @@
 
 #pragma once
 #include <ul/menu/ui/ui_IMenuLayout.hpp>
+#include <ul/menu/ui/ui_UserCarousel.hpp>
+#include <ul/menu/ui/ui_Haptics.hpp>
 
 namespace ul::menu::ui {
 
@@ -14,6 +16,9 @@ namespace ul::menu::ui {
             bool load_menu;
             pu::ui::elm::TextBlock::Ref info_text;
             pu::ui::elm::Menu::Ref users_menu;
+            UserCarousel::Ref user_carousel;   // steamui: replaces users_menu when the theme enables it
+            pu::audio::Sfx user_move_sfx;
+            Haptics haptics;
             pu::audio::Sfx user_create_sfx;
             pu::audio::Sfx user_select_sfx;
 

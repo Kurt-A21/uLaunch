@@ -6,7 +6,19 @@
 #include <vector>
 #include <SDL2/SDL_image.h>
 #define PU_SMART_CTOR(type) using Ref = std::shared_ptr<type>; template<typename ...Args> static inline Ref New(Args &&...args) { return std::make_shared<type>(std::forward<Args>(args)...); }
-namespace pu::ui { struct TouchPoint { s32 x=-1, y=-1; }; }
+namespace pu::ui {
+    struct TouchPoint { s32 x=-1, y=-1; bool IsEmpty() const { return x < 0 && y < 0; } bool HitsRegion(s32 rx, s32 ry, s32 rw, s32 rh) const { return x >= rx && x < rx + rw && y >= ry && y < ry + rh; } };
+    struct Color { u8 r, g, b, a; };
+    enum class DefaultFontSize : u32 { Small, Medium, MediumLarge, Large, Count };
+    inline std::string GetDefaultFont(const DefaultFontSize) { return "font"; }
+}
+#define HidNpadButton_A (1ULL << 0)
+#define HidNpadButton_Left (1ULL << 12)
+#define HidNpadButton_Right (1ULL << 14)
+#define HidNpadButton_StickLLeft (1ULL << 16)
+#define HidNpadButton_StickLRight (1ULL << 18)
+#define HidNpadButton_StickRLeft (1ULL << 20)
+#define HidNpadButton_StickRRight (1ULL << 22)
 namespace pu::sdl2 {
     struct TextureObj { int id; };
     using Texture = TextureObj*;
@@ -17,7 +29,11 @@ namespace pu::ui::render {
     constexpr s32 ScreenWidth = 1920, ScreenHeight = 1080;
     struct TextureRenderOptions { int alpha; int w; int h; TextureRenderOptions(std::optional<u8> a, std::optional<s32> w, std::optional<s32> h, std::optional<float>, std::optional<s32>, std::optional<s32>) : alpha(a.value_or(255)), w(w.value_or(-1)), h(h.value_or(-1)) {} };
     struct DrawCall { int tex_id; int alpha; int x, y, w, h; };
-    struct Renderer { std::vector<DrawCall> calls; PU_SMART_CTOR(Renderer) void RenderTexture(sdl2::Texture t, s32 x, s32 y, TextureRenderOptions o){ calls.push_back({t ? t->id : -1, o.alpha, x, y, o.w, o.h}); } };
+    struct Renderer { std::vector<DrawCall> calls; PU_SMART_CTOR(Renderer) void RenderTexture(sdl2::Texture t, s32 x, s32 y, TextureRenderOptions o){ calls.push_back({t ? t->id : -1, o.alpha, x, y, o.w, o.h}); }
+        void RenderRoundedRectangleFill(Color c, s32 x, s32 y, s32 w, s32 h, s32){ calls.push_back({-2, c.a, x, y, w, h}); }
+        void RenderRectangleFill(Color c, s32 x, s32 y, s32 w, s32 h){ calls.push_back({-3, c.a, x, y, w, h}); } };
+    sdl2::Texture RenderText(const std::string &font, const std::string &text, const Color clr, const u32 = 0, const u32 = 0);
+    s32 GetTextureWidth(sdl2::Texture t);
     sdl2::Texture ConvertToTexture(SDL_Surface *s);
 }
 namespace pu::ui::elm { class Element { public: virtual ~Element(){} virtual s32 GetX()=0; virtual s32 GetY()=0; virtual s32 GetWidth()=0; virtual s32 GetHeight()=0; virtual void OnRender(render::Renderer::Ref &d, const s32 x, const s32 y)=0; virtual void OnInput(const u64, const u64, const u64, const TouchPoint)=0; }; }

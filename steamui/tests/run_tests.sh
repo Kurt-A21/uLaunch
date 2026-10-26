@@ -26,6 +26,11 @@ $CXX "${F[@]}" -Werror -fsanitize=address,undefined -c "$SRC/source/ul/menu/menu
 $CXX "${F[@]}" -fsanitize=address,undefined "$T/test_launchlog.cpp" "$OUT/ll.o" -o "$OUT/test_launchlog"
 (mkdir -p "$OUT/r4" && cd "$OUT/r4" && "$OUT/test_launchlog")
 
+echo "### Profile picker (UserCarousel)"
+$CXX "${F[@]}" -Werror -fsanitize=address,undefined -c "$SRC/source/ul/menu/ui/ui_UserCarousel.cpp" -o "$OUT/uc.o"
+$CXX "${F[@]}" -fsanitize=address,undefined "$T/test_carousel.cpp" "$OUT/uc.o" -o "$OUT/test_carousel"
+"$OUT/test_carousel"
+
 echo "### Burger-menu overclock presets == oc_profile.py presets"
 $CXX "${F[@]}" -Werror -D__SWITCH__ -c "$SRC/source/ul/menu/ui/ui_PerformancePresets.cpp" -o "$OUT/pp.o"
 $CXX "${F[@]}" -D__SWITCH__ "$T/test_presets.cpp" "$OUT/pp.o" -o "$OUT/test_presets"

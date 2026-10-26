@@ -12,6 +12,7 @@ This is a fork of [uLaunch](https://github.com/XorTroll/uLaunch) 1.2.5. It repla
   - Every move gets a light HD Rumble tick, and opening the menu or launching a game gives a stronger one. Turn this off in UI.json with `main_menu.haptics.enabled`.
 - **Smooth loading.** Art and sounds load on a background thread, so scrolling never stutters on SD card reads. Recently viewed art is cached, so going back and forth is instant.
 - **Homebrew on the home screen.** Every app in `switch/` (and its direct subfolders) is added to the row automatically, next to your games.
+- **Profile picker.** Big avatars in a row with the same glow and spring as the game row; the name fades in under the focused one and "Add user" is the last tile. D-pad/stick or touch: tap to focus, tap again to pick.
 - **Burger menu (top right).** Tap it, or press ZL/ZR, and the old nav bar (Power, Controllers, Album, Web, User, Themes, Settings, Mii, amiibo) slides down as a list.
 
 Theme: **Deck Night** (`ulaunch/themes/DeckNight.ultheme`).
@@ -126,6 +127,7 @@ These keys are new in this fork:
 - `main_menu.entry_menu.fixed_row_count`: locks the number of rows (Deck Night uses 1). +/- resizing is disabled while it's set.
 - `main_menu.burger_icon`: position of the burger button. Its image is `ui/Main/BurgerIcon.png`. Themes without that image show no button.
 - `main_menu.haptics.enabled`: HD Rumble ticks on/off.
+- `startup_menu.user_carousel`: `{"enabled": true, "y": 540, "avatar_size": 256, "spacing": 340}` turns the profile list into the avatar row. Without it, uLaunch's original list is used.
 - `quick_menu.quick_menu.slide_down`: `true` turns the quick menu into a dropdown. Related keys: `width`, `item_height`, `items_to_show`, `dim_alpha`.
 
 ## Essential homebrew apps

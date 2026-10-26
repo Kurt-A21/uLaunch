@@ -45,21 +45,40 @@ namespace ul::menu::ui {
         g_GlobalSettings.ApplyConfigForElement("startup_menu", "users_menu", this->users_menu);
         this->Add(this->users_menu);
 
+        // steamui: console-style profile picker, if the theme asks for it
+        this->user_move_sfx = nullptr;
+        util::JSON carousel_json;
+        if(TryGetUiElement("startup_menu", "user_carousel", carousel_json) && carousel_json.value("enabled", false)) {
+            this->user_carousel = UserCarousel::New(carousel_json.value("y", 520), carousel_json.value("avatar_size", 256), carousel_json.value("spacing", 340), TryFindLoadImageHandle("ui/Main/OverIcon/Cursor"), g_MenuApplication->GetTextColor(), [&]() {
+                pu::audio::PlaySfx(this->user_move_sfx);
+                this->haptics.Play(Haptics::Kind::Tick);
+            });
+            this->Add(this->user_carousel);
+            this->users_menu->SetVisible(false);
+
+            util::JSON haptics_json;
+            this->haptics.Initialize(TryGetUiElement("main_menu", "haptics", haptics_json) && haptics_json.value("enabled", false));
+        }
+
         this->Add(GetScreenCaptureBackground());
     }
 
     void StartupMenuLayout::LoadSfx() {
         this->user_create_sfx = pu::audio::LoadSfx(TryGetActiveThemeResource("sound/Startup/UserCreate.wav"));
         this->user_select_sfx = pu::audio::LoadSfx(TryGetActiveThemeResource("sound/Startup/UserSelect.wav"));
+        this->user_move_sfx = pu::audio::LoadSfx(TryGetActiveThemeResource("sound/Main/CursorMove.wav"));
     }
     
     void StartupMenuLayout::DisposeSfx() {
         pu::audio::DestroySfx(this->user_create_sfx);
         pu::audio::DestroySfx(this->user_select_sfx);
+        pu::audio::DestroySfx(this->user_move_sfx);
+        this->haptics.Stop();
     }
 
     void StartupMenuLayout::OnMenuInput(const u64 keys_down, const u64 keys_up, const u64 keys_held, const pu::ui::TouchPoint touch_pos) {
         UpdateScreenCaptureBackground(false);
+        this->haptics.Update();
     }
 
     bool StartupMenuLayout::OnHomeButtonPress() {
@@ -69,6 +88,9 @@ namespace ul::menu::ui {
 
     void StartupMenuLayout::ReloadMenu() {
         this->users_menu->ClearItems();
+        if(this->user_carousel != nullptr) {
+            this->user_carousel->Clear();
+        }
 
         std::vector<AccountUid> user_ids;
         UL_RC_ASSERT(acc::ListAccounts(user_ids));
@@ -83,6 +105,9 @@ namespace ul::menu::ui {
                 auto user_icon = pu::sdl2::TextureHandle::New(pu::ui::render::LoadImageFromBuffer(user_icon_buf, user_icon_size));
                 delete[] user_icon_buf;
                 user_item->SetIcon(user_icon);
+                if(this->user_carousel != nullptr) {
+                    this->user_carousel->AddUser(user_icon, name, std::bind(&StartupMenuLayout::user_DefaultKey, this, user_id));
+                }
 
                 user_item->AddOnKey(std::bind(&StartupMenuLayout::user_DefaultKey, this, user_id));
                 user_item->SetColor(g_MenuApplication->GetTextColor());
@@ -94,6 +119,9 @@ namespace ul::menu::ui {
         create_user_item->SetColor(g_MenuApplication->GetTextColor());
         create_user_item->AddOnKey(std::bind(&StartupMenuLayout::create_DefaultKey, this));
         this->users_menu->AddItem(create_user_item);
+        if(this->user_carousel != nullptr) {
+            this->user_carousel->AddCreateUser(GetLanguageString("startup_add_user"), std::bind(&StartupMenuLayout::create_DefaultKey, this));
+        }
 
         this->users_menu->SetSelectedIndex(0);
     }

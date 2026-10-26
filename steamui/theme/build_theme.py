@@ -222,6 +222,9 @@ ui["main_menu"] = {
     "entry_menu": {"x": 0, "y": 760, "fixed_row_count": 1},
     "haptics": {"enabled": True},
 }
+# Profile picker: big avatars in a row (steamui UserCarousel); the old list stays configured as fallback
+ui["startup_menu"]["info_text"] = {"y": 190, "h_align": "center", "font_size": "large"}
+ui["startup_menu"]["user_carousel"] = {"enabled": True, "y": 540, "avatar_size": 256, "spacing": 340}
 ui["quick_menu"] = {"quick_menu": {"x": 1480, "y": 140, "width": 380, "item_height": 80, "items_to_show": 10, "slide_down": True, "dim_alpha": 110}}
 json.dump(ui, open(p("ui", "UI.json"), "w"), indent=4)
 

@@ -127,6 +127,19 @@ def main():
     n_items = len(re.findall(r"options_menu->AddItem\(", (repo / "projects/uMenu/source/ul/menu/ui/ui_QuickMenu.cpp").read_text()))
     (ok if qm["items_to_show"] >= n_items else warn)(f"all {n_items} quick menu items visible without scrolling")
 
+    sm = ui.get("startup_menu", {})
+    uc = sm.get("user_carousel")
+    if uc and uc.get("enabled"):
+        print("== Profile picker geometry (mirrors UserCarousel) ==")
+        peak = uc["avatar_size"] * 1.18 * 1.02  # focus scale + spring overshoot
+        ring = peak * factor
+        top, bottom = uc["y"] - ring / 2, uc["y"] + ring / 2
+        name_y = uc["y"] + uc["avatar_size"] * 1.18 / 2 + 36
+        (ok if top > sm["info_text"]["y"] + 60 else fail)(f"welcome text (y={sm['info_text']['y']}) clears the focused avatar's glow (top {top:.0f})")
+        (ok if name_y + 50 < H else fail)(f"profile name at y~{name_y:.0f} stays on screen")
+        (ok if uc["spacing"] > peak else fail)(f"neighbouring avatars don't overlap the focused one ({uc['spacing']}px apart vs {peak:.0f}px wide)")
+        (ok if (W - uc["spacing"]) / 2 > 0 else fail)("at least 3 profiles visible at once")
+
     print()
     print(f"{'PASSED' if not fails else 'FAILED'}: {len(fails)} failure(s), {len(warns)} warning(s)")
     sys.exit(1 if fails else 0)
