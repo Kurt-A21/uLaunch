@@ -1,4 +1,5 @@
 #include <ul/menu/ui/ui_MainMenuLayout.hpp>
+#include <ul/menu/menu_HomebrewSync.hpp>
 #include <ul/menu/ui/ui_MenuApplication.hpp>
 #include <ul/fs/fs_Stdio.hpp>
 #include <ul/menu/menu_Cache.hpp>
@@ -507,14 +508,17 @@ namespace ul::menu::ui {
 
     void MainMenuLayout::menu_FocusedEntryChanged(const bool has_prev_entry, const bool is_prev_entry_suspended, const bool is_cur_entry_suspended) {
         // steamui: per-game background art + sound preview, and fade the title back in
-        u64 hover_app_id = 0;
+        std::string hover_key;
         if(this->entry_menu->IsFocusedNonemptyEntry()) {
             const auto &hover_entry = this->entry_menu->GetFocusedEntry();
             if(hover_entry.Is<EntryType::Application>()) {
-                hover_app_id = hover_entry.app_info.app_id;
+                hover_key = HoverMedia::MakeApplicationKey(hover_entry.app_info.app_id);
+            }
+            else if(hover_entry.Is<EntryType::Homebrew>()) {
+                hover_key = HoverMedia::MakeHomebrewKey(hover_entry.hb_info.nro_target.nro_path);
             }
         }
-        this->hover_media->SetTarget(hover_app_id);
+        this->hover_media->SetTarget(hover_key);
         this->entry_text_alpha = 0;
 
         this->cur_entry_main_text->SetVisible(true);
@@ -1155,6 +1159,8 @@ namespace ul::menu::ui {
 
     void MainMenuLayout::Reload() {
         UL_RC_ASSERT(acc::GetAccountName(g_GlobalSettings.system_status.selected_user, g_UserName));
+        // steamui: every homebrew app in sdmc:/switch shows up on the home screen
+        SyncHomebrewEntries(GetActiveMenuPath());
         this->entry_menu->Initialize(g_GlobalSettings.system_status.last_menu_index, this->next_reload_user_changed ? g_GlobalSettings.system_status.last_menu_fs_path : "");
         this->quick_menu->UpdateItems();
         this->next_reload_user_changed = false;

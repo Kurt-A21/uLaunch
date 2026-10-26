@@ -14,6 +14,11 @@ Usage (SD card mounted on your computer, e.g. /Volumes/SWITCH):
   python3 steamui_media.py art    /Volumes/SWITCH
   python3 steamui_media.py sounds /Volumes/SWITCH ~/Desktop/game_clips
   python3 steamui_media.py list   /Volumes/SWITCH
+  python3 steamui_media.py images /Volumes/SWITCH ~/Desktop/my_art
+
+Homebrew apps (sdmc:/switch/**.nro) use their NRO file name as key, e.g. art for
+switch/nfscx/nfscx-vulkan.nro goes in ulaunch/steamui/bg/nfscx-vulkan.jpg. The `images` and
+`sounds` commands match your file names against both games and homebrew names.
 
 Sound clip names: either the title ID (0100ABCD12340000.mp3) or the game's name
 ("Mario Kart 8 Deluxe.m4a"); names are matched loosely against your installed games.
@@ -43,6 +48,61 @@ def installed_app_ids(sd: Path):
     return sorted(ids)
 
 
+def homebrew_keys(sd: Path):
+    """NRO stem -> display name, for sdmc:/switch/*.nro and sdmc:/switch/*/*.nro"""
+    out = {}
+    root = sd / "switch"
+    for nro in list(root.glob("*.nro")) + list(root.glob("*/*.nro")):
+        if not any(part.startswith(".") for part in nro.relative_to(root).parts):
+            out[nro.stem] = f"{nro.stem} (homebrew)"
+    return out
+
+
+def match_key(stem, names):
+    """names: key -> display name. Accepts the exact key or a loose name match."""
+    if stem in names:
+        return stem
+    if re.fullmatch(r"[0-9a-fA-F]{16}", stem) and stem.upper() in names:
+        return stem.upper()
+    def norm(x):
+        return re.sub(r"[^a-z0-9]+", " ", x.lower().replace("(homebrew)", "")).strip()
+    normed = {norm(v): k for k, v in names.items()}
+    hit = difflib.get_close_matches(norm(stem), list(normed), n=1, cutoff=0.55)
+    return normed[hit[0]] if hit else None
+
+
+def save_cover(img, dst):
+    from PIL import Image
+    img = img.convert("RGB")
+    scale = max(1280 / img.width, 720 / img.height)
+    img = img.resize((round(img.width * scale), round(img.height * scale)), Image.LANCZOS)
+    left, top = (img.width - 1280) // 2, (img.height - 720) // 2
+    img.crop((left, top, left + 1280, top + 720)).save(dst, "JPEG", quality=88, progressive=False, optimize=True)
+
+
+def all_names(sd: Path, db):
+    names = {tid: (db.get(tid) or {}).get("name") or tid for tid in installed_app_ids(sd)}
+    names.update(homebrew_keys(sd))
+    return names
+
+
+def cmd_images(sd: Path, folder: Path):
+    from PIL import Image
+    names = all_names(sd, load_titledb())
+    out = sd / "ulaunch/steamui/bg"
+    out.mkdir(parents=True, exist_ok=True)
+    for f in sorted(p for p in folder.iterdir() if p.is_file() and not p.name.startswith(".")):
+        key = match_key(f.stem, names)
+        if key is None:
+            print(f"skip  {f.name}: no game or homebrew matches this name")
+            continue
+        try:
+            save_cover(Image.open(f), out / f"{key}.jpg")
+            print(f"ok    {f.name} -> {names[key]}")
+        except Exception as e:
+            print(f"fail  {f.name}: {e}")
+
+
 def load_titledb(region="US.en"):
     import requests
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -64,9 +124,8 @@ def load_titledb(region="US.en"):
 
 
 def cmd_list(sd: Path):
-    db = load_titledb()
-    for tid in installed_app_ids(sd):
-        name = (db.get(tid) or {}).get("name") or "?"
+    names = all_names(sd, load_titledb())
+    for tid, name in names.items():
         art = "art" if (sd / "ulaunch/steamui/bg" / f"{tid}.jpg").exists() else "-"
         snd = "sound" if (sd / "ulaunch/steamui/sound" / f"{tid}.wav").exists() else "-"
         print(f"{tid}  {art:5} {snd:6} {name}")
@@ -99,33 +158,19 @@ def cmd_art(sd: Path, force=False):
             print(f"fail  {name}: {e}")
             continue
         # cover-fit to 1280x720 (the menu scales it up smoothly; half the memory/decode time of 1080p)
-        scale = max(1280 / img.width, 720 / img.height)
-        img = img.resize((round(img.width * scale), round(img.height * scale)), Image.LANCZOS)
-        left, top = (img.width - 1280) // 2, (img.height - 720) // 2
-        img = img.crop((left, top, left + 1280, top + 720))
-        img.save(dst, "JPEG", quality=88, progressive=False, optimize=True)
+        save_cover(img, dst)
         print(f"ok    {name}")
 
 
 def cmd_sounds(sd: Path, clips: Path):
-    db = load_titledb()
-    ids = installed_app_ids(sd)
-    names = {tid: (db.get(tid) or {}).get("name") or tid for tid in ids}
+    names = all_names(sd, load_titledb())
     out = sd / "ulaunch/steamui/sound"
     out.mkdir(parents=True, exist_ok=True)
 
-    def norm(s):
-        return re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
-
     for clip in sorted(p for p in clips.iterdir() if p.is_file() and not p.name.startswith(".")):
-        stem = clip.stem
-        tid = stem.upper() if re.fullmatch(r"[0-9a-fA-F]{16}", stem) else None
+        tid = match_key(clip.stem, names)
         if tid is None:
-            match = difflib.get_close_matches(norm(stem), [norm(n) for n in names.values()], n=1, cutoff=0.55)
-            if match:
-                tid = next(t for t, n in names.items() if norm(n) == match[0])
-        if tid is None:
-            print(f"skip  {clip.name}: no installed game matches this name (rename it to the title ID)")
+            print(f"skip  {clip.name}: no game or homebrew matches this name (rename it to the title ID)")
             continue
         dst = out / f"{tid}.wav"
         fade_start = MAX_SOUND_SECONDS - 2
@@ -141,7 +186,7 @@ def cmd_sounds(sd: Path, clips: Path):
 
 
 def main():
-    if len(sys.argv) < 3 or sys.argv[1] not in ("art", "sounds", "list"):
+    if len(sys.argv) < 3 or sys.argv[1] not in ("art", "sounds", "list", "images"):
         print(__doc__)
         sys.exit(1)
     sd = Path(sys.argv[2]).expanduser()
@@ -149,6 +194,10 @@ def main():
         sys.exit(f"{sd} doesn't look like your SD card (no ulaunch folder). Install uLaunch first.")
     if sys.argv[1] == "list":
         cmd_list(sd)
+    elif sys.argv[1] == "images":
+        if len(sys.argv) < 4:
+            sys.exit("Give the folder with your images, e.g. steamui_media.py images /Volumes/SWITCH ~/Desktop/art")
+        cmd_images(sd, Path(sys.argv[3]).expanduser())
     elif sys.argv[1] == "art":
         cmd_art(sd, force="--force" in sys.argv)
     else:

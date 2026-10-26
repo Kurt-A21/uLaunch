@@ -5,6 +5,7 @@
 #include <switch.h>
 #include <algorithm>
 #include <chrono>
+#include <string>
 #include <vector>
 
 namespace ul::menu::ui {
@@ -13,9 +14,10 @@ namespace ul::menu::ui {
     //  - full-screen per-game background art, crossfaded in with a slow zoom-out
     //  - per-game soundtrack preview, started once the cursor settles; the menu BGM is ducked meanwhile
     //
-    // Both are optional and user-supplied on the SD card (APPID = 16 uppercase hex digits):
-    //   sdmc:/ulaunch/steamui/bg/<APPID>.jpg  (or .png)  - 1280x720 recommended (1920x1080 works, uses more memory)
-    //   sdmc:/ulaunch/steamui/sound/<APPID>.wav          - 44100 Hz WAV, keep it short (<= 30 s)
+    // Both are optional and user-supplied on the SD card. KEY is the game's title ID (16 uppercase hex digits),
+    // or for homebrew the NRO file name without ".nro" (e.g. "nfscx-vulkan"):
+    //   sdmc:/ulaunch/steamui/bg/<KEY>.jpg  (or .png)  - 1280x720 recommended (1920x1080 works, uses more memory)
+    //   sdmc:/ulaunch/steamui/sound/<KEY>.wav          - 44100 Hz WAV, keep it short (<= 30 s)
     //
     // Performance: decoding (JPEG/PNG and WAV) happens on a low-priority worker thread, so scrolling never
     // stalls on SD reads; only the texture upload happens on the render thread. Recently shown art is kept
@@ -48,7 +50,7 @@ namespace ul::menu::ui {
             };
 
             struct CachedBackground {
-                u64 app_id;
+                std::string key;
                 pu::sdl2::TextureHandle::Ref tex; // null texture = "this game has no art"
             };
 
@@ -58,17 +60,17 @@ namespace ul::menu::ui {
             Mutex worker_lock;
             CondVar worker_cv;
             bool worker_exit;
-            u64 req_bg_app_id;          // 0 = none
-            u64 req_sound_app_id;       // 0 = none
+            std::string req_bg_key;     // empty = none
+            std::string req_sound_key;  // empty = none
             bool res_bg_ready;
-            u64 res_bg_app_id;
+            std::string res_bg_key;
             SDL_Surface *res_bg_surface;
             bool res_sound_ready;
-            u64 res_sound_app_id;
+            std::string res_sound_key;
             Mix_Chunk *res_sound_chunk;
 
-            // Requested target (0 = none)
-            u64 target_app_id;
+            // Requested target (empty = none)
+            std::string target_key;
             std::chrono::steady_clock::time_point target_tp;
             bool bg_pending;
             bool bg_waiting;
@@ -95,8 +97,8 @@ namespace ul::menu::ui {
             static void WorkerMain(void *arg);
             void WorkerLoop();
 
-            bool TryGetCachedBackground(const u64 app_id, pu::sdl2::TextureHandle::Ref &out_tex);
-            void CacheBackground(const u64 app_id, pu::sdl2::TextureHandle::Ref tex);
+            bool TryGetCachedBackground(const std::string &key, pu::sdl2::TextureHandle::Ref &out_tex);
+            void CacheBackground(const std::string &key, pu::sdl2::TextureHandle::Ref tex);
             void ShowBackground(pu::sdl2::TextureHandle::Ref tex);
             void PollWorkerResults();
             void PlaySoundChunk(Mix_Chunk *chunk);
@@ -125,8 +127,11 @@ namespace ul::menu::ui {
                 return pu::ui::render::ScreenHeight;
             }
 
-            // Call whenever the focused entry changes (0 = not a game: fade art out, stop sound)
-            void SetTarget(const u64 app_id);
+            // Call whenever the focused entry changes (empty = nothing to show: fade art out, stop sound)
+            void SetTarget(const std::string &key);
+
+            static std::string MakeApplicationKey(const u64 app_id);
+            static std::string MakeHomebrewKey(const std::string &nro_path);
 
             // Immediately stops the preview sound (e.g. when launching a game or leaving the menu)
             void StopSound();

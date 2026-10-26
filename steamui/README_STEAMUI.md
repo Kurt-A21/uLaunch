@@ -11,6 +11,7 @@ This is a fork of [uLaunch](https://github.com/XorTroll/uLaunch) 1.2.5. It repla
   - Launching a game gives the tile a press dip.
   - Every move gets a light HD Rumble tick, and opening the menu or launching a game gives a stronger one. Turn this off in UI.json with `main_menu.haptics.enabled`.
 - **Smooth loading.** Art and sounds load on a background thread, so scrolling never stutters on SD card reads. Recently viewed art is cached, so going back and forth is instant.
+- **Homebrew on the home screen.** Every app in `switch/` (and its direct subfolders) is added to the row automatically, next to your games.
 - **Burger menu (top right).** Tap it, or press ZL/ZR, and the old nav bar (Power, Controllers, Album, Web, User, Themes, Settings, Mii, amiibo) slides down as a list.
 
 Theme: **Deck Night** (`ulaunch/themes/DeckNight.ultheme`).
@@ -32,6 +33,17 @@ Theme: **Deck Night** (`ulaunch/themes/DeckNight.ultheme`).
 
 **To uninstall:** delete `atmosphere/contents/0100000000001000`. This gives you the stock home menu back.
 
+## Homebrew apps and ports
+
+New `.nro` files in `switch/` or `switch/<folder>/` are added to the home screen the next time the menu loads.
+
+- **Removing apps.** If you remove one from the menu, it stays removed. The list of apps already added is kept in `ulaunch/steamui/hb_known.txt`; delete that file to add everything again.
+- **Full memory for big ports.** Large ports (NFS Carbon, the N64 ports, etc.) need full memory. To set that up once:
+  1. Pick any installed game you don't mind lending.
+  2. Press **X** on it, then choose **Select as homebrew donor/take-over application**.
+  3. From then on, homebrew starts in place of that game, with full memory (like holding R in hbmenu).
+- **Art and sound for homebrew.** These use the NRO file name instead of a title ID. For example, `switch/nfscx/nfscx-vulkan.nro` gets its art from `ulaunch/steamui/bg/nfscx-vulkan.jpg`.
+
 ## Hover art and sounds
 
 Files go on the SD card. `APPID` is the game's 16-digit title ID.
@@ -50,6 +62,7 @@ brew install ffmpeg                 # once, only needed for sounds
 python3 steamui_media.py list   /Volumes/SWITCH            # what's installed / missing
 python3 steamui_media.py art    /Volumes/SWITCH            # official eShop art for every installed game
 python3 steamui_media.py sounds /Volumes/SWITCH ~/clips    # converts your clips (named by game or title ID)
+python3 steamui_media.py images /Volumes/SWITCH ~/art      # your own images, e.g. for homebrew (named by game/app)
 ```
 
 ### Getting each game's main theme

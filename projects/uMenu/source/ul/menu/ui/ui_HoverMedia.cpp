@@ -8,17 +8,15 @@ namespace ul::menu::ui {
 
     namespace {
 
-        std::string MakeMediaPath(const char *dir, const u64 app_id, const char *ext) {
-            char path[FS_MAX_PATH] = {};
-            std::snprintf(path, sizeof(path), "%s/%016llX.%s", dir, static_cast<unsigned long long>(app_id), ext);
-            return path;
+        std::string MakeMediaPath(const char *dir, const std::string &key, const char *ext) {
+            return std::string(dir) + "/" + key + "." + ext;
         }
 
         // Both run on the worker thread (or inline if it couldn't be created)
 
-        SDL_Surface *LoadBackgroundSurface(const u64 app_id) {
+        SDL_Surface *LoadBackgroundSurface(const std::string &key) {
             for(const auto ext: { "jpg", "png" }) {
-                const auto path = MakeMediaPath(HoverMedia::BackgroundDirectory, app_id, ext);
+                const auto path = MakeMediaPath(HoverMedia::BackgroundDirectory, key, ext);
                 if(fs::ExistsFile(path)) {
                     auto surface = IMG_Load(path.c_str());
                     if(surface != nullptr) {
@@ -29,8 +27,8 @@ namespace ul::menu::ui {
             return nullptr;
         }
 
-        Mix_Chunk *LoadSoundChunk(const u64 app_id) {
-            const auto path = MakeMediaPath(HoverMedia::SoundDirectory, app_id, "wav");
+        Mix_Chunk *LoadSoundChunk(const std::string &key) {
+            const auto path = MakeMediaPath(HoverMedia::SoundDirectory, key, "wav");
             if(!fs::ExistsFile(path)) {
                 return nullptr;
             }
@@ -43,7 +41,7 @@ namespace ul::menu::ui {
 
     }
 
-    HoverMedia::HoverMedia() : Element(), worker_thread(), worker_running(false), worker_lock(), worker_cv(), worker_exit(false), req_bg_app_id(0), req_sound_app_id(0), res_bg_ready(false), res_bg_app_id(0), res_bg_surface(nullptr), res_sound_ready(false), res_sound_app_id(0), res_sound_chunk(nullptr), target_app_id(0), target_tp(), bg_pending(false), bg_waiting(false), sound_pending(false), sound_waiting(false), bg_cache(), cur_bg(), cur_bg_alpha(0), cur_bg_zoom(1.0), prev_bg(), prev_bg_alpha(0), prev_bg_zoom(1.0), cur_sound(nullptr), cur_sound_channel(-1), fading_sounds(), music_ducked(false), saved_music_volume(MIX_MAX_VOLUME) {
+    HoverMedia::HoverMedia() : Element(), worker_thread(), worker_running(false), worker_lock(), worker_cv(), worker_exit(false), req_bg_key(), req_sound_key(), res_bg_ready(false), res_bg_key(), res_bg_surface(nullptr), res_sound_ready(false), res_sound_key(), res_sound_chunk(nullptr), target_key(), target_tp(), bg_pending(false), bg_waiting(false), sound_pending(false), sound_waiting(false), bg_cache(), cur_bg(), cur_bg_alpha(0), cur_bg_zoom(1.0), prev_bg(), prev_bg_alpha(0), prev_bg_zoom(1.0), cur_sound(nullptr), cur_sound_channel(-1), fading_sounds(), music_ducked(false), saved_music_volume(MIX_MAX_VOLUME) {
         mutexInit(&this->worker_lock);
         condvarInit(&this->worker_cv);
 
@@ -93,7 +91,7 @@ namespace ul::menu::ui {
     void HoverMedia::WorkerLoop() {
         mutexLock(&this->worker_lock);
         while(true) {
-            while(!this->worker_exit && (this->req_bg_app_id == 0) && (this->req_sound_app_id == 0)) {
+            while(!this->worker_exit && this->req_bg_key.empty() && this->req_sound_key.empty()) {
                 condvarWait(&this->worker_cv, &this->worker_lock);
             }
             if(this->worker_exit) {
@@ -101,11 +99,11 @@ namespace ul::menu::ui {
             }
 
             // Art first: it's what the user notices first
-            if(this->req_bg_app_id != 0) {
-                const auto app_id = this->req_bg_app_id;
-                this->req_bg_app_id = 0;
+            if(!this->req_bg_key.empty()) {
+                const auto key = this->req_bg_key;
+                this->req_bg_key.clear();
                 mutexUnlock(&this->worker_lock);
-                auto surface = LoadBackgroundSurface(app_id);
+                auto surface = LoadBackgroundSurface(key);
                 mutexLock(&this->worker_lock);
 
                 if(this->res_bg_surface != nullptr) {
@@ -113,48 +111,64 @@ namespace ul::menu::ui {
                     SDL_FreeSurface(this->res_bg_surface);
                 }
                 this->res_bg_surface = surface;
-                this->res_bg_app_id = app_id;
+                this->res_bg_key = key;
                 this->res_bg_ready = true;
                 continue;
             }
 
-            if(this->req_sound_app_id != 0) {
-                const auto app_id = this->req_sound_app_id;
-                this->req_sound_app_id = 0;
+            if(!this->req_sound_key.empty()) {
+                const auto key = this->req_sound_key;
+                this->req_sound_key.clear();
                 mutexUnlock(&this->worker_lock);
-                auto chunk = LoadSoundChunk(app_id);
+                auto chunk = LoadSoundChunk(key);
                 mutexLock(&this->worker_lock);
 
                 if(this->res_sound_chunk != nullptr) {
                     Mix_FreeChunk(this->res_sound_chunk);
                 }
                 this->res_sound_chunk = chunk;
-                this->res_sound_app_id = app_id;
+                this->res_sound_key = key;
                 this->res_sound_ready = true;
             }
         }
         mutexUnlock(&this->worker_lock);
     }
 
-    void HoverMedia::SetTarget(const u64 app_id) {
-        if(app_id == this->target_app_id) {
+    std::string HoverMedia::MakeApplicationKey(const u64 app_id) {
+        char key[0x20] = {};
+        std::snprintf(key, sizeof(key), "%016llX", static_cast<unsigned long long>(app_id));
+        return key;
+    }
+
+    std::string HoverMedia::MakeHomebrewKey(const std::string &nro_path) {
+        // "sdmc:/switch/nfscx/nfscx-vulkan.nro" -> "nfscx-vulkan"
+        auto name = nro_path.substr(nro_path.find_last_of('/') + 1);
+        const auto dot = name.find_last_of('.');
+        if(dot != std::string::npos) {
+            name = name.substr(0, dot);
+        }
+        return name;
+    }
+
+    void HoverMedia::SetTarget(const std::string &key) {
+        if(key == this->target_key) {
             return;
         }
 
-        this->target_app_id = app_id;
+        this->target_key = key;
         this->target_tp = std::chrono::steady_clock::now();
         this->bg_pending = true;
         this->bg_waiting = false;
-        this->sound_pending = app_id != 0;
+        this->sound_pending = !key.empty();
         this->sound_waiting = false;
 
         // The previous game's sound always fades out right away
         this->FadeOutCurrentSound(SoundFadeOutMs);
     }
 
-    bool HoverMedia::TryGetCachedBackground(const u64 app_id, pu::sdl2::TextureHandle::Ref &out_tex) {
+    bool HoverMedia::TryGetCachedBackground(const std::string &key, pu::sdl2::TextureHandle::Ref &out_tex) {
         for(auto it = this->bg_cache.begin(); it != this->bg_cache.end(); it++) {
-            if(it->app_id == app_id) {
+            if(it->key == key) {
                 // Move to the back (most recently used)
                 auto entry = *it;
                 this->bg_cache.erase(it);
@@ -166,9 +180,9 @@ namespace ul::menu::ui {
         return false;
     }
 
-    void HoverMedia::CacheBackground(const u64 app_id, pu::sdl2::TextureHandle::Ref tex) {
+    void HoverMedia::CacheBackground(const std::string &key, pu::sdl2::TextureHandle::Ref tex) {
         pu::sdl2::TextureHandle::Ref existing;
-        if(this->TryGetCachedBackground(app_id, existing)) {
+        if(this->TryGetCachedBackground(key, existing)) {
             this->bg_cache.back().tex = tex;
             return;
         }
@@ -177,7 +191,7 @@ namespace ul::menu::ui {
             // Evict the least recently used one (the texture stays alive while still on screen)
             this->bg_cache.erase(this->bg_cache.begin());
         }
-        this->bg_cache.push_back({ app_id, tex });
+        this->bg_cache.push_back({ key, tex });
     }
 
     void HoverMedia::ShowBackground(pu::sdl2::TextureHandle::Ref tex) {
@@ -206,24 +220,24 @@ namespace ul::menu::ui {
 
     void HoverMedia::PollWorkerResults() {
         SDL_Surface *bg_surface = nullptr;
-        u64 bg_app_id = 0;
+        std::string bg_key;
         bool got_bg = false;
         Mix_Chunk *sound_chunk = nullptr;
-        u64 sound_app_id = 0;
+        std::string sound_key;
         bool got_sound = false;
 
         mutexLock(&this->worker_lock);
         if(this->res_bg_ready) {
             got_bg = true;
             bg_surface = this->res_bg_surface;
-            bg_app_id = this->res_bg_app_id;
+            bg_key = this->res_bg_key;
             this->res_bg_surface = nullptr;
             this->res_bg_ready = false;
         }
         if(this->res_sound_ready) {
             got_sound = true;
             sound_chunk = this->res_sound_chunk;
-            sound_app_id = this->res_sound_app_id;
+            sound_key = this->res_sound_key;
             this->res_sound_chunk = nullptr;
             this->res_sound_ready = false;
         }
@@ -232,15 +246,15 @@ namespace ul::menu::ui {
         if(got_bg) {
             // Only the GPU upload happens here (fast); decoding already happened on the worker
             auto tex = pu::sdl2::TextureHandle::New(pu::ui::render::ConvertToTexture(bg_surface));
-            this->CacheBackground(bg_app_id, tex);
-            if(this->bg_waiting && (bg_app_id == this->target_app_id)) {
+            this->CacheBackground(bg_key, tex);
+            if(this->bg_waiting && (bg_key == this->target_key)) {
                 this->bg_waiting = false;
                 this->ShowBackground(tex);
             }
         }
 
         if(got_sound) {
-            if(this->sound_waiting && (sound_app_id == this->target_app_id) && (sound_chunk != nullptr)) {
+            if(this->sound_waiting && (sound_key == this->target_key) && (sound_chunk != nullptr)) {
                 this->sound_waiting = false;
                 this->PlaySoundChunk(sound_chunk);
             }
@@ -350,22 +364,22 @@ namespace ul::menu::ui {
         if(this->bg_pending && (elapsed_ms >= BackgroundLoadDelayMs)) {
             this->bg_pending = false;
             pu::sdl2::TextureHandle::Ref cached;
-            if(this->target_app_id == 0) {
+            if(this->target_key.empty()) {
                 this->ShowBackground({});
             }
-            else if(this->TryGetCachedBackground(this->target_app_id, cached)) {
+            else if(this->TryGetCachedBackground(this->target_key, cached)) {
                 this->ShowBackground(cached);
             }
             else if(this->worker_running) {
                 mutexLock(&this->worker_lock);
-                this->req_bg_app_id = this->target_app_id;
+                this->req_bg_key = this->target_key;
                 condvarWakeAll(&this->worker_cv);
                 mutexUnlock(&this->worker_lock);
                 this->bg_waiting = true;
             }
             else {
-                auto tex = pu::sdl2::TextureHandle::New(pu::ui::render::ConvertToTexture(LoadBackgroundSurface(this->target_app_id)));
-                this->CacheBackground(this->target_app_id, tex);
+                auto tex = pu::sdl2::TextureHandle::New(pu::ui::render::ConvertToTexture(LoadBackgroundSurface(this->target_key)));
+                this->CacheBackground(this->target_key, tex);
                 this->ShowBackground(tex);
             }
         }
@@ -374,13 +388,13 @@ namespace ul::menu::ui {
             this->sound_pending = false;
             if(this->worker_running) {
                 mutexLock(&this->worker_lock);
-                this->req_sound_app_id = this->target_app_id;
+                this->req_sound_key = this->target_key;
                 condvarWakeAll(&this->worker_cv);
                 mutexUnlock(&this->worker_lock);
                 this->sound_waiting = true;
             }
             else {
-                auto chunk = LoadSoundChunk(this->target_app_id);
+                auto chunk = LoadSoundChunk(this->target_key);
                 if(chunk != nullptr) {
                     this->PlaySoundChunk(chunk);
                 }
