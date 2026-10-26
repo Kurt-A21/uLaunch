@@ -13,13 +13,23 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Update packages and install Python
+    # steamui: split into small steps so a failure names its cause (the job logs aren't always readable),
+    # and made to work on newer images (root without sudo; Debian's "externally managed" Python refuses pip)
+    - name: Install build tools (apt)
       run: |
-        sudo -n apt-get update
-        sudo -n apt-get upgrade -y patch autoconf automake diffutils pkgconf fakeroot git maven file tar bzip2 zstd python3 python3-pip python-is-python3
-        python -m pip install requests
-        sudo -n dkp-pacman --noconfirm -U \
-          "https://wii.leseratte10.de/devkitPro/other-stuff/dkp-toolchain-vars-1.0.2-1-any.pkg.tar.xz"
+        SUDO=""; if [ "$(id -u)" != "0" ]; then SUDO="sudo -n"; fi
+        $SUDO apt-get update
+        $SUDO apt-get install -y patch autoconf automake diffutils pkgconf fakeroot git maven file tar bzip2 zstd zip python3 python3-pip python3-requests python-is-python3
+
+    - name: Install Python requests (for arc)
+      run: |
+        python3 -c "import requests" 2>/dev/null || python3 -m pip install requests || python3 -m pip install --break-system-packages requests
+
+    - name: Install dkp-toolchain-vars
+      run: |
+        SUDO=""; if [ "$(id -u)" != "0" ]; then SUDO="sudo -n"; fi
+        $SUDO dkp-pacman -Sy --noconfirm --needed dkp-toolchain-vars \
+          || $SUDO dkp-pacman --noconfirm -U "https://wii.leseratte10.de/devkitPro/other-stuff/dkp-toolchain-vars-1.0.2-1-any.pkg.tar.xz"
 
     - name: Set workspace permissions
       run: chmod 777 -R "$GITHUB_WORKSPACE"
