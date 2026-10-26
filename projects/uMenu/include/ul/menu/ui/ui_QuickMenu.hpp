@@ -40,6 +40,7 @@ namespace ul::menu::ui {
             void RenderSlideDown(pu::ui::render::Renderer::Ref &drawer);
             pu::ui::elm::Menu::Ref options_menu;
             pu::ui::elm::MenuItem::Ref power_menu_item;
+            pu::ui::elm::MenuItem::Ref performance_menu_item;
             pu::ui::elm::MenuItem::Ref controller_menu_item;
             pu::ui::elm::MenuItem::Ref album_menu_item;
             pu::ui::elm::MenuItem::Ref web_menu_item;

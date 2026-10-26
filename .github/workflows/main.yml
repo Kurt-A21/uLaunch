@@ -35,6 +35,7 @@ jobs:
         make -j$(nproc) LIBNX=$PWD/libnx/nx/ usystem uloader umenu umanager
         mkdir -p SdOut/ulaunch/themes SdOut/ulaunch/steamui/bg SdOut/ulaunch/steamui/sound
         cp steamui/DeckNight.ultheme SdOut/ulaunch/themes/
+        cp -r steamui/overlay/config SdOut/
         cp steamui/README_STEAMUI.md SdOut/
         cp steamui/tools/steamui_media.py steamui/tools/get_homebrew.py steamui/tools/oc_profile.py SdOut/
         zip -r SdOut.zip SdOut

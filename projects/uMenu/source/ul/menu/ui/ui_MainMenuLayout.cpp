@@ -1,6 +1,7 @@
 #include <ul/menu/ui/ui_MainMenuLayout.hpp>
 #include <ul/menu/menu_HomebrewSync.hpp>
 #include <ul/menu/menu_LaunchLog.hpp>
+#include <ul/menu/ui/ui_PerformanceMenu.hpp>
 #include <ul/menu/ui/ui_MenuApplication.hpp>
 #include <ul/fs/fs_Stdio.hpp>
 #include <ul/menu/menu_Cache.hpp>
@@ -515,10 +516,20 @@ namespace ul::menu::ui {
             const auto &hover_entry = this->entry_menu->GetFocusedEntry();
             if(hover_entry.Is<EntryType::Application>()) {
                 hover_key = HoverMedia::MakeApplicationKey(hover_entry.app_info.app_id);
+                SetPerformanceTarget(hover_entry.app_info.app_id, hover_entry.control.name, false);
             }
             else if(hover_entry.Is<EntryType::Homebrew>()) {
                 hover_key = HoverMedia::MakeHomebrewKey(hover_entry.hb_info.nro_target.nro_path);
+                // Homebrew runs as the take-over game, so that's whose sys-clk profile applies
+                const auto takeover = g_GlobalSettings.cache_hb_takeover_app_id;
+                SetPerformanceTarget((takeover != os::InvalidApplicationId) ? takeover : 0, hover_entry.control.name.empty() ? hover_key : hover_entry.control.name, true);
             }
+            else {
+                SetPerformanceTarget(0, "", false);
+            }
+        }
+        else {
+            SetPerformanceTarget(0, "", false);
         }
         this->hover_media->SetTarget(hover_key);
         this->entry_text_alpha = 0;

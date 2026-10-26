@@ -1,4 +1,5 @@
 #include <ul/menu/ui/ui_QuickMenu.hpp>
+#include <ul/menu/ui/ui_PerformanceMenu.hpp>
 #include <algorithm>
 #include <ul/menu/ui/ui_MenuApplication.hpp>
 #include <ul/cfg/cfg_Config.hpp>
@@ -47,6 +48,18 @@ namespace ul::menu::ui {
         this->power_menu_item->AddOnKey(&ShowPowerDialog);
         this->power_menu_item->SetColor(g_MenuApplication->GetTextColor());
         this->options_menu->AddItem(this->power_menu_item);
+
+        // steamui: overclocking (sys-clk) for the highlighted game
+        this->performance_menu_item = pu::ui::elm::MenuItem::New("Performance");
+        {
+            auto perf_icon = TryFindLoadImageHandle("ui/Main/QuickIcon/Performance");
+            if(perf_icon->Get() != nullptr) {
+                this->performance_menu_item->SetIcon(perf_icon);
+            }
+        }
+        this->performance_menu_item->AddOnKey(&ShowPerformanceMenu);
+        this->performance_menu_item->SetColor(g_MenuApplication->GetTextColor());
+        this->options_menu->AddItem(this->performance_menu_item);
 
         this->controller_menu_item = pu::ui::elm::MenuItem::New(GetLanguageString("quick_controller_options"));
         this->controller_menu_item->SetIcon(TryFindLoadImageHandle("ui/Main/QuickIcon/Controllers"));

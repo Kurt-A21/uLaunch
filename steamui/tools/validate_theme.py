@@ -124,7 +124,7 @@ def main():
     (ok if qx + qw + 12 <= W and qy + qh + 12 <= H else fail)(f"dropdown {qw}x{qh} at ({qx},{qy}) fits on screen")
     (ok if qy - 12 >= by + bh else fail)(f"dropdown opens below the burger (panel top {qy - 12} >= {by + bh})")
     (ok if abs((qx + qw) - (bx + bw)) <= 20 else warn)("dropdown is right-aligned with the burger")
-    n_items = 9
+    n_items = len(re.findall(r"options_menu->AddItem\(", (repo / "projects/uMenu/source/ul/menu/ui/ui_QuickMenu.cpp").read_text()))
     (ok if qm["items_to_show"] >= n_items else warn)(f"all {n_items} quick menu items visible without scrolling")
 
     print()

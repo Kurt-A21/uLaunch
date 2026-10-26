@@ -142,7 +142,17 @@ def ic_mii(d, k, w):
 def ic_amiibo(d, k, w):
     d.ellipse((12 * k, 12 * k, 88 * k, 88 * k), outline=TXT, width=w); d.ellipse((32 * k, 32 * k, 68 * k, 68 * k), outline=TXT, width=w)
 
-for name, fn in (("Power", ic_power), ("Controllers", ic_pad), ("Album", ic_album), ("WebBrowser", ic_web),
+def ic_perf(d, k, w):
+    # speedometer: arc, ticks and a needle pointing high
+    d.arc((12 * k, 18 * k, 88 * k, 94 * k), 150, 30, fill=TXT, width=w)
+    for a in (150, 195, 240, 285, 330, 15):
+        r = math.radians(a)
+        d.line((50 * k + 30 * k * math.cos(r), 56 * k + 30 * k * math.sin(r), 50 * k + 38 * k * math.cos(r), 56 * k + 38 * k * math.sin(r)), fill=TXT, width=max(k, w // 2))
+    r = math.radians(320)
+    d.line((50 * k, 56 * k, 50 * k + 30 * k * math.cos(r), 56 * k + 30 * k * math.sin(r)), fill=BLUE, width=w)
+    d.ellipse((44 * k, 50 * k, 56 * k, 62 * k), fill=TXT)
+
+for name, fn in (("Performance", ic_perf), ("Power", ic_power), ("Controllers", ic_pad), ("Album", ic_album), ("WebBrowser", ic_web),
                  ("Settings", ic_settings), ("Themes", ic_themes), ("MiiEdit", ic_mii), ("Amiibo", ic_amiibo)):
     save(icon(fn), "ui", "Main", "QuickIcon", f"{name}.png")
 
@@ -212,7 +222,7 @@ ui["main_menu"] = {
     "entry_menu": {"x": 0, "y": 760, "fixed_row_count": 1},
     "haptics": {"enabled": True},
 }
-ui["quick_menu"] = {"quick_menu": {"x": 1480, "y": 140, "width": 380, "item_height": 80, "items_to_show": 9, "slide_down": True, "dim_alpha": 110}}
+ui["quick_menu"] = {"quick_menu": {"x": 1480, "y": 140, "width": 380, "item_height": 80, "items_to_show": 10, "slide_down": True, "dim_alpha": 110}}
 json.dump(ui, open(p("ui", "UI.json"), "w"), indent=4)
 
 json.dump({"name": "Deck Night", "format_version": 3, "release": "1.2.5", "description": "SteamOS-inspired dark theme for the steamui uMenu build: game row at the bottom, hover art and sound, burger menu.", "author": "Kurt"}, open(p("theme", "Manifest.json"), "w"), indent=4)

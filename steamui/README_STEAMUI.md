@@ -82,9 +82,14 @@ Some games block video capture. For those, use an audio file of the game's sound
 
 ## Overclocking (sys-clk)
 
-sys-clk sets the CPU, GPU and RAM clocks for each game, by title ID, in `config/sys-clk/config.ini`. There are two ways to set them:
+sys-clk sets the CPU, GPU and RAM clocks for each game, by title ID, in `config/sys-clk/config.ini`. There are three ways to set them:
 
-- **On the console:** open the Ultrahand overlay (L + D-pad Down + right stick), go to **sys-clk**, and change clocks for the running game.
+- **In the home menu (easiest):** highlight a game, open the **burger menu**, and choose **Performance**.
+  - It shows the game's current preset, plus live clocks, temperatures and dock state.
+  - **Set preset** offers Stock, Battery, Balanced and Performance; your choice is saved in sys-clk for that game.
+  - **Pause/Resume overclocking** turns sys-clk off or on for everything.
+  - For homebrew and ports, the preset goes on the take-over game they run as.
+- **During a game:** open the Ultrahand overlay (L + D-pad Down + right stick), go to **sys-clk**, and change clocks live.
 - **From your computer:** use `oc_profile.py` with a preset:
 
 ```
@@ -107,6 +112,12 @@ The handheld GPU safe max is 460 MHz on original Switches and 614 MHz on newer m
 - Or set `csv_write_interval_ms=1000` in `config.ini`, play for a minute, and look at `config/sys-clk/context.csv`.
 
 **Tested:** `steamui/tests/overclock/run_overclock_test.sh` runs sys-clk's actual config parser and clock manager against these profiles. It checks every power state (handheld, USB charger, official charger, docked) on both chip types, plus leaving a game and docking mid-game.
+
+## Overlay look (Ultrahand)
+
+`config/ultrahand/theme.ini` and `config/ultrahand/wallpaper.rgba` restyle the Ultrahand overlay to match Deck Night: a dark blue-grey background, Steam-blue highlights, toggles and sliders, and a wallpaper with a faint grid. Both are also in `config/ultrahand/themes/` and `wallpapers/`, so you can switch back in Ultrahand's settings.
+
+**Limitation:** the theme applies to Ultrahand and to overlays built on its library. sys-clk's and Status Monitor's own overlays use the older Tesla library, which has no theme support, so they keep their stock look. The Performance option in the home menu covers the overclock settings in Deck Night style.
 
 ## Theme options (UI.json)
 

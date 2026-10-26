@@ -26,5 +26,10 @@ $CXX "${F[@]}" -Werror -fsanitize=address,undefined -c "$SRC/source/ul/menu/menu
 $CXX "${F[@]}" -fsanitize=address,undefined "$T/test_launchlog.cpp" "$OUT/ll.o" -o "$OUT/test_launchlog"
 (mkdir -p "$OUT/r4" && cd "$OUT/r4" && "$OUT/test_launchlog")
 
+echo "### Burger-menu overclock presets == oc_profile.py presets"
+$CXX "${F[@]}" -Werror -D__SWITCH__ -c "$SRC/source/ul/menu/ui/ui_PerformancePresets.cpp" -o "$OUT/pp.o"
+$CXX "${F[@]}" -D__SWITCH__ "$T/test_presets.cpp" "$OUT/pp.o" -o "$OUT/test_presets"
+python3 "$T/dump_presets.py" "$ROOT/steamui/tools" | "$OUT/test_presets"
+
 echo "### Theme"
 python3 "$ROOT/steamui/tools/validate_theme.py" "$ROOT/steamui/DeckNight.ultheme" "$ROOT" | tail -1
