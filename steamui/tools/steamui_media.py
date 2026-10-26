@@ -13,6 +13,7 @@ Your installed games are found from uLaunch's menu entries on the SD card (ulaun
 Usage (SD card mounted on your computer, e.g. /Volumes/SWITCH):
   python3 steamui_media.py art    /Volumes/SWITCH
   python3 steamui_media.py sounds /Volumes/SWITCH ~/Desktop/game_clips
+  python3 steamui_media.py sync   /Volumes/SWITCH      <- run this after adding games
   python3 steamui_media.py list   /Volumes/SWITCH
   python3 steamui_media.py images /Volumes/SWITCH ~/Desktop/my_art
 
@@ -103,6 +104,86 @@ def cmd_images(sd: Path, folder: Path):
             print(f"fail  {f.name}: {e}")
 
 
+def album_videos(sd: Path):
+    """Video captures on sysMMC and on emuMMC (whose Nintendo folder lives under emuMMC/...)."""
+    roots = [sd / "Nintendo" / "Album"] + [p / "Album" for p in sd.glob("emuMMC/*/Nintendo")]
+    vids = []
+    for r in roots:
+        if r.is_dir():
+            vids += [v for v in r.rglob("*.mp4") if not v.name.startswith(".")]
+    return sorted(vids, key=lambda v: v.name, reverse=True)  # file names start with the capture time
+
+
+def capture_time(v: Path):
+    m = re.match(r"(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})", v.name)
+    return f"{m[1]}-{m[2]}-{m[3]} {m[4]}:{m[5]}" if m else v.name
+
+
+def convert_clip(src: Path, dst: Path):
+    fade_start = MAX_SOUND_SECONDS - 2
+    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-vn", "-t", str(MAX_SOUND_SECONDS),
+           "-af", f"loudnorm=I=-18:TP=-2,afade=t=out:st={fade_start}:d=2", "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(dst)]
+    try:
+        subprocess.run(cmd, check=True)
+        return True
+    except FileNotFoundError:
+        sys.exit("ffmpeg is not installed (macOS: brew install ffmpeg)")
+    except subprocess.CalledProcessError:
+        return False
+
+
+def cmd_sync(sd: Path, ask=input):
+    """After adding games: fetch missing art, then match new title-screen captures to games missing a soundtrack."""
+    print("== 1/3 Wallpapers: official art for games that don't have one yet ==")
+    cmd_art(sd)
+
+    print()
+    print("== 2/3 Soundtracks from your video captures ==")
+    db = load_titledb()
+    names = all_names(sd, db)
+    sound_dir = sd / "ulaunch/steamui/sound"
+    sound_dir.mkdir(parents=True, exist_ok=True)
+    done_file = sd / "ulaunch/steamui/processed_captures.txt"
+    done = set(done_file.read_text().split()) if done_file.exists() else set()
+    def save_done():
+        # saved after every answer, so an interrupted run never redoes work
+        done_file.write_text("\n".join(sorted(done)) + ("\n" if done else ""))
+
+    new_vids = [v for v in album_videos(sd) if v.name not in done]
+    missing = [k for k in names if not (sound_dir / f"{k}.wav").exists()]
+    if not new_vids:
+        print("  No new video captures. On a game's title screen, hold Capture to save the last 30 s, then run sync again.")
+    for v in new_vids:
+        if not missing:
+            print("  Every game already has a soundtrack.")
+            break
+        print(f"\n  Capture {v.name}  ({capture_time(v)})")
+        for i, k in enumerate(missing, 1):
+            print(f"    {i:2}. {names[k]}")
+        try:
+            ans = ask("  Which game is this? number, s = skip, i = not a title screen (ignore forever): ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print("\n  Stopped. Run sync again to continue where you left off.")
+            break
+        if ans == "i":
+            done.add(v.name)
+            save_done()
+            continue
+        if not ans.isdigit() or not (1 <= int(ans) <= len(missing)):
+            continue
+        key = missing[int(ans) - 1]
+        if convert_clip(v, sound_dir / f"{key}.wav"):
+            print(f"  ok    {names[key]} now plays this soundtrack")
+            missing.remove(key)
+            done.add(v.name)
+            save_done()
+        else:
+            print("  fail  ffmpeg could not read this video")
+    print()
+    print("== 3/3 Status ==")
+    cmd_list(sd)
+
+
 def load_titledb(region="US.en"):
     import requests
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -173,26 +254,22 @@ def cmd_sounds(sd: Path, clips: Path):
             print(f"skip  {clip.name}: no game or homebrew matches this name (rename it to the title ID)")
             continue
         dst = out / f"{tid}.wav"
-        fade_start = MAX_SOUND_SECONDS - 2
-        cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(clip), "-vn", "-t", str(MAX_SOUND_SECONDS),
-               "-af", f"loudnorm=I=-18:TP=-2,afade=t=out:st={fade_start}:d=2", "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(dst)]
-        try:
-            subprocess.run(cmd, check=True)
+        if convert_clip(clip, dst):
             print(f"ok    {clip.name} -> {names.get(tid, tid)}")
-        except FileNotFoundError:
-            sys.exit("ffmpeg is not installed (macOS: brew install ffmpeg)")
-        except subprocess.CalledProcessError:
+        else:
             print(f"fail  {clip.name}: ffmpeg could not convert it")
 
 
 def main():
-    if len(sys.argv) < 3 or sys.argv[1] not in ("art", "sounds", "list", "images"):
+    if len(sys.argv) < 3 or sys.argv[1] not in ("art", "sounds", "list", "images", "sync"):
         print(__doc__)
         sys.exit(1)
     sd = Path(sys.argv[2]).expanduser()
     if not (sd / "ulaunch").is_dir():
         sys.exit(f"{sd} doesn't look like your SD card (no ulaunch folder). Install uLaunch first.")
-    if sys.argv[1] == "list":
+    if sys.argv[1] == "sync":
+        cmd_sync(sd)
+    elif sys.argv[1] == "list":
         cmd_list(sd)
     elif sys.argv[1] == "images":
         if len(sys.argv) < 4:

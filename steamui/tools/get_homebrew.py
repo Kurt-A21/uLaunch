@@ -84,6 +84,10 @@ def safe_extract(data, sd: Path, dry):
         if parts == ("bootloader", "hekate_ipl.ini") and (sd / "bootloader/hekate_ipl.ini").exists():
             print("      kept your existing bootloader/hekate_ipl.ini")
             continue
+        if parts[0] == "config" and sd.joinpath(*parts).exists():
+            # e.g. config/sys-clk/config.ini: never overwrite your settings/overclock profiles
+            print(f"      kept your existing {'/'.join(parts)}")
+            continue
         dst = sd.joinpath(*parts)
         written.append(dst)
         if not dry:

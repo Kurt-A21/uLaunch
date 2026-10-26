@@ -36,7 +36,7 @@ jobs:
         mkdir -p SdOut/ulaunch/themes SdOut/ulaunch/steamui/bg SdOut/ulaunch/steamui/sound
         cp steamui/DeckNight.ultheme SdOut/ulaunch/themes/
         cp steamui/README_STEAMUI.md SdOut/
-        cp steamui/tools/steamui_media.py steamui/tools/get_homebrew.py SdOut/
+        cp steamui/tools/steamui_media.py steamui/tools/get_homebrew.py steamui/tools/oc_profile.py SdOut/
         zip -r SdOut.zip SdOut
         
     - uses: actions/upload-artifact@master
@@ -53,3 +53,5 @@ jobs:
       run: python3 -m pip install pillow
     - name: Run steamui tests (sanitizers + theme validation)
       run: bash steamui/tests/run_tests.sh
+    - name: Run overclock test (sys-clk's own code vs. oc_profile.py profiles)
+      run: bash steamui/tests/overclock/run_overclock_test.sh

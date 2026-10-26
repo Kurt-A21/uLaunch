@@ -53,7 +53,13 @@ Files go on the SD card. `APPID` is the game's 16-digit title ID.
 | Background art | `ulaunch/steamui/bg/<APPID>.jpg` (or `.png`) | 1280×720 baseline JPEG (1920×1080 also works but uses more memory) |
 | Soundtrack clip | `ulaunch/steamui/sound/<APPID>.wav` | 44.1 kHz WAV, ≤30 s |
 
-The helper script `steamui_media.py` does both from your computer, with the SD card mounted:
+**After adding games, run one command:** `python3 steamui_media.py sync /Volumes/SWITCH`. It:
+
+1. Downloads official eShop art for every game that doesn't have a wallpaper yet. New games are detected automatically.
+2. Lists your new title-screen video captures (sysMMC and emuMMC albums) one by one and asks which game each is. It turns the audio into that game's soundtrack and remembers what's done, so captures are never asked about twice.
+3. Shows which games still lack art or sound.
+
+Individual commands, if you prefer:
 
 ```
 pip3 install pillow requests        # once
@@ -76,6 +82,34 @@ The clips come from your own games:
 5. Run `steamui_media.py sounds`. It takes the audio from each video, evens out the loudness, and fades out the end.
 
 Some games block video capture. For those, use an audio file of the game's soundtrack from an album you own.
+
+## Overclocking (sys-clk)
+
+sys-clk sets the CPU, GPU and RAM clocks for each game, by title ID, in `config/sys-clk/config.ini`. There are two ways to set them:
+
+- **On the console:** open the Ultrahand overlay (L + D-pad Down + right stick), go to **sys-clk**, and change clocks for the running game.
+- **From your computer:** use `oc_profile.py` with a preset:
+
+```
+python3 oc_profile.py add /Volumes/SWITCH "Mario Kart 8 Deluxe" performance   # or balanced / battery
+python3 oc_profile.py show /Volumes/SWITCH
+```
+
+| Preset | Docked | Handheld |
+|---|---|---|
+| performance | CPU 1785, GPU 921, RAM 1600 MHz | CPU 1785, GPU at the safe max, RAM 1600 MHz |
+| balanced | CPU 1428, GPU 844, RAM 1600 MHz | CPU 1224, GPU 460, RAM 1600 MHz |
+| battery | stock | CPU 816, GPU 307, RAM 1065 MHz |
+
+The handheld GPU safe max is 460 MHz on original Switches and 614 MHz on newer models (V2, Lite, OLED). sys-clk applies these limits by itself, and also limits the GPU to 768 MHz on non-official chargers.
+
+**Ports and homebrew:** they run as your take-over game, so put the profile on that game's title ID. The NFS Carbon port deliberately ignores its own clock settings while sys-clk is running.
+
+**Checking it works on your console:**
+- Open Status Monitor (in Ultrahand) while a game is running; its clocks should match the profile.
+- Or set `csv_write_interval_ms=1000` in `config.ini`, play for a minute, and look at `config/sys-clk/context.csv`.
+
+**Tested:** `steamui/tests/overclock/run_overclock_test.sh` runs sys-clk's actual config parser and clock manager against these profiles. It checks every power state (handheld, USB charger, official charger, docked) on both chip types, plus leaving a game and docking mid-game.
 
 ## Theme options (UI.json)
 
